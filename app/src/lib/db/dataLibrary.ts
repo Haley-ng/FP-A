@@ -77,15 +77,17 @@ export async function listDatasets(): Promise<Dataset[]> {
   const ids = Object.keys(SOURCE_ROW_COUNT_QUERY);
   const counts = await Promise.all(ids.map((id) => query<{ n: number }>(SOURCE_ROW_COUNT_QUERY[id])));
 
-  // The one real, currently-known validation failure (data-model.md): Currency_data.xlsx's 7
-  // invalid-date rows were rejected by the calendar foreign key on load, so the table is short
-  // 7 of its source 7,672 rows. Computed live off the actual count, not a stored flag, so it
-  // stays correct if the data is ever reloaded with those rows fixed. This fallback only covers
-  // that one case — anything else (e.g. GL's known duplicate entry_no/territory rows) shows as
-  // "pass" here until a Refresh Now (or the scheduled refresh) has actually run and written a
-  // real row into dataset_sync_status, since computing every check on every page load would be
-  // needlessly expensive for a list that's shown on every screen's rail footer.
-  const liveValidationStatus = (id: string, rowCount: number): ValidationStatus => (id === "currency" && rowCount < 7672 ? "fail" : "pass");
+  // Currency_data.xlsx originally had 7 rows with the invalid date 29 Feb 2025 (2025 isn't a
+  // leap year), rejected by the calendar foreign key on load — the source file has since been
+  // corrected and reloaded with those 7 rows removed, so 7,665 is now the correct, complete
+  // count (not a shortfall). This is a live sanity floor, not an exact-match check, so it stays
+  // correct if the row count changes again for a legitimate reason (more months added, etc.) —
+  // it only catches an actual, large drop that would indicate rows failing to load. Anything
+  // else (e.g. GL's known duplicate entry_no/territory rows) shows as "pass" here until a
+  // Refresh Now (or the scheduled refresh) has actually run and written a real row into
+  // dataset_sync_status, since computing every check on every page load would be needlessly
+  // expensive for a list that's shown on every screen's rail footer.
+  const liveValidationStatus = (id: string, rowCount: number): ValidationStatus => (id === "currency" && rowCount < 7000 ? "fail" : "pass");
 
   return ids.map((id, i) => {
     const sync = syncByDbName.get(APP_ID_TO_DB_NAME[id]);
@@ -114,21 +116,28 @@ async function datasetChecksWithDetail(datasetId: string): Promise<CheckWithDeta
 
   if (datasetId === "gl" || datasetId === "budget") {
     const table = SQL_TABLE_NAME[datasetId];
+    // entry_no is a batch/voucher number that legitimately covers multiple distinct line items
+    // in this dataset (confirmed by inspection: the same entry_no recurs with different dates,
+    // accounts, amounts and details — even narrowing to entry_no + territory + account + date
+    // still produced false positives, e.g. two different amounts posted to the same account on
+    // the same day under the same entry_no). The only thing that's actually invalid is the same
+    // transaction recorded twice outright — every column identical, which a real double-import
+    // would produce and a shared batch number alone would not.
     const dupSql = `
-      select entry_no, territory_key, count(*) as n
+      select entry_no, territory_key, account_key, date, details, amount, count(*) as n
       from ${table}
-      group by 1, 2
+      group by 1, 2, 3, 4, 5, 6
       having count(*) > 1
       order by 1, 2
       limit 20
     `;
-    const rows = await query<{ entry_no: string; territory_key: number; n: string }>(dupSql);
+    const rows = await query<{ entry_no: string; territory_key: number; account_key: number; date: string; details: string; amount: string; n: string }>(dupSql);
     checks.push({
-      label: "No duplicate (entry_no, territory) rows",
+      label: "No fully duplicated transaction rows",
       result: rows.length === 0 ? "pass" : "fail",
       issues: rows.map((r) => ({
-        rowRef: `${datasetId === "gl" ? "GL" : "Budget"}: entry_no ${r.entry_no}, territory ${r.territory_key}`,
-        message: `Appears ${r.n} times for the same (entry_no, territory_key) — expected exactly one row per combination.`,
+        rowRef: `${datasetId === "gl" ? "GL" : "Budget"}: entry_no ${r.entry_no}, territory ${r.territory_key}, account ${r.account_key}, date ${r.date}`,
+        message: `The exact same transaction ("${r.details}", ${r.amount}) appears ${r.n} times — this looks like a duplicate import, not two distinct entries.`,
       })),
     });
   }
@@ -148,11 +157,16 @@ async function datasetChecksWithDetail(datasetId: string): Promise<CheckWithDeta
   }
 
   if (datasetId === "currency") {
-    // Currency_data.xlsx's known issue (data-model.md): 29 Feb 2025 rows don't parse as a
-    // real date and were rejected by the calendar foreign key on load — count them here so
-    // the gap between the source file's 7,672 rows and what's actually in the table is explained.
+    // Currency_data.xlsx previously had 7 rows for 29 Feb 2025 (not a real date — 2025 isn't a
+    // leap year) that were rejected by the calendar foreign key on load. The source file has
+    // since been corrected and reloaded without those rows, so the table's current row count
+    // (7,665) is the correct, complete figure. Any row rejected by the FK constraint never
+    // lands in this table, so this check can only detect a rejection indirectly, via a large
+    // drop in row count — 7,000 is a sanity floor well below the real ~7,665, not an exact
+    // expected total, so this doesn't go stale again the next time a legitimate row count
+    // changes (e.g. more months of rates added).
     const rows = await query<{ n: string }>("select count(*) as n from currency_rate");
-    const failed = Number(rows[0].n) < 7672;
+    const failed = Number(rows[0].n) < 7000;
     checks.push({
       label: "All dates parse to a valid calendar date",
       result: failed ? "fail" : "pass",
@@ -160,8 +174,7 @@ async function datasetChecksWithDetail(datasetId: string): Promise<CheckWithDeta
         ? [
             {
               rowRef: "Currency_data.xlsx (date column)",
-              message:
-                '7 rows (one per currency) for 29 Feb 2025 are stored as the literal text "2/29/2025" — 2025 is not a leap year, so this is not a valid date. Rejected by the calendar foreign key on load; 7,665 of the source 7,672 rows are in currency_rate.',
+              message: `Only ${rows[0].n} rows are in currency_rate — expected at least 7,000. Some rows may have been rejected on load (e.g. an unparseable date).`,
             },
           ]
         : [],

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { AppShell, useFpaFilters } from "@/components/fpa/AppShell";
+import { ErrorState } from "@/components/fpa/ErrorState";
+import { fetchJson } from "@/lib/fpa/fetchJson";
 import type { Dataset, DatasetCheck, DatasetIssue } from "@/lib/fpa/types";
 
 interface DataLibraryPayload {
@@ -23,19 +25,24 @@ function DataLibraryBody() {
   const { canEdit } = useFpaFilters();
   const [dataset, setDataset] = useState("currency");
   const [data, setData] = useState<DataLibraryPayload | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [refreshState, setRefreshState] = useState<{ status: "idle" | "refreshing" | "error"; message?: string }>({ status: "idle" });
   const [uploadState, setUploadState] = useState<{ status: "idle" | "uploading" | "error"; message?: string }>({ status: "idle" });
 
   function reload() {
     const params = new URLSearchParams({ dataset });
-    fetch(`/api/fpa/data-library?${params}`)
-      .then((r) => r.json())
-      .then(setData);
+    fetchJson<DataLibraryPayload>(`/api/fpa/data-library?${params}`)
+      .then((d) => {
+        setData(d);
+        setError(null);
+      })
+      .catch((e: Error) => setError(e.message));
   }
 
   useEffect(reload, [dataset]);
 
   async function refreshNow() {
+    if (refreshState.status === "refreshing") return;
     setRefreshState({ status: "refreshing" });
     try {
       const res = await fetch(`/api/data-library/${dataset}/refresh`, {
@@ -77,6 +84,7 @@ function DataLibraryBody() {
     }
   }
 
+  if (error) return <ErrorState message={error} onRetry={reload} />;
   if (!data) return <div style={{ padding: "var(--space-6)" }}>Loading…</div>;
 
   const passing = data.datasets.filter((d) => d.validationStatus === "pass").length;
@@ -103,11 +111,7 @@ function DataLibraryBody() {
             <tbody>
               {data.datasets.map((d) => (
                 <tr key={d.id} className="rowpick" onClick={() => setDataset(d.id)} style={d.id === dataset ? { background: "var(--color-accent-100)" } : undefined}>
-                  <td>
-                    <a href="#" onClick={(e) => e.preventDefault()}>
-                      {d.name}
-                    </a>
-                  </td>
+                  <td>{d.name}</td>
                   <td className="text-muted">{d.rowCount.toLocaleString()}</td>
                   <td className="text-muted">{new Date(d.lastRefreshedAt).toLocaleDateString("en-US")}</td>
                   <td>
@@ -166,8 +170,7 @@ function DataLibraryBody() {
           <div className="card-kicker">Live validation</div>
           <p style={{ margin: 0, fontSize: 12.5 }}>
             These checks run against the real tables in Supabase on every load — not a simulated
-            state. Currency fails one check because 7 rows in Currency_data.xlsx used the invalid
-            date 29 Feb 2025 and were rejected by the calendar foreign key when the data was loaded.
+            state. Any failing check is listed above with the specific rows behind it.
           </p>
         </div>
 
