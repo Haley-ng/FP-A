@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/industry-ed2c2cf3-c053-47ad-9873-b495c8b586b6/styles.css">
+  <script src="_ds/industry-ed2c2cf3-c053-47ad-9873-b495c8b586b6/_ds_bundle.js"></script>
+  <style>
+    a { color: var(--color-accent-700); text-decoration: none; }
+    a:hover { color: var(--color-accent-900); }
+    .idx-row:hover { background: var(--color-accent-100); }
+    .rail-item:hover { background: color-mix(in srgb, var(--color-accent) 7%, transparent); }
+  </style>
+</helmet>
+
+<sc-if value="{{ atContents }}" hint-placeholder-val="{{ true }}">
+<div style="min-height:100vh;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body);padding:var(--space-8) var(--space-6);display:flex;flex-direction:column;gap:var(--space-8);align-items:center">
+  <div style="width:100%;max-width:1180px;display:flex;flex-direction:column;gap:var(--space-8)">
+
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:var(--space-8);border-bottom:1px solid var(--color-text);padding-bottom:var(--space-4)">
+      <div style="display:flex;flex-direction:column;gap:var(--space-2)">
+        <div class="text-muted" style="font-size:10px;letter-spacing:.14em;text-transform:uppercase">FP&amp;A Model · contents</div>
+        <h1 style="margin:0;line-height:.95;font-size:clamp(40px,6vw,72px)">Financial Planning<br />&amp; Analysis</h1>
+        <div style="font-size:15px;max-width:62ch;text-wrap:pretty">Eleven screens over one dataset. Every screen reads live from the GL and carries the same territory, year, period and currency filter through the URL.</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:var(--space-3);align-items:flex-end;flex:none">
+        <div style="display:flex;flex-direction:column;gap:2px;text-align:right">
+          <span class="text-muted" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase">Last refresh</span>
+          <span style="font-family:var(--font-heading);font-size:15px">04 Feb 2026 · 06:00</span>
+        </div>
+        <a class="btn btn-primary blueprint" href="#" onClick="{{ openHome }}"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>Open Executive Overview →</a>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--space-4)">
+      <div class="card blueprint"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <div class="card-kicker">Screens</div>
+        <div style="font-family:var(--font-heading);font-size:34px;line-height:1">11</div>
+        <div class="card-meta">plus 6 states beyond the happy path</div>
+      </div>
+      <div class="card blueprint"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <div class="card-kicker">Territories</div>
+        <div style="font-family:var(--font-heading);font-size:34px;line-height:1">7</div>
+        <div class="card-meta">reported in USD, held in local currency</div>
+      </div>
+      <div class="card blueprint"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <div class="card-kicker">Datasets</div>
+        <div style="font-family:var(--font-heading);font-size:34px;line-height:1">10</div>
+        <div class="card-meta">validated on refresh · 3 issues flagged</div>
+      </div>
+      <div class="card blueprint"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <div class="card-kicker">Charts</div>
+        <div style="font-family:var(--font-heading);font-size:34px;line-height:1">8</div>
+        <div class="card-meta">sparklines, grouped bars, three bridges</div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:var(--space-4)">
+      <div style="display:flex;align-items:baseline;justify-content:space-between">
+        <h3 style="margin:0">The eleven screens</h3>
+        <span class="text-muted" style="font-size:12px">Each row opens the screen in the app shell</span>
+      </div>
+      <div class="blueprint" style="padding:0">
+        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <sc-for list="{{ index }}" as="row" hint-placeholder-count="11">
+          <a class="idx-row" href="#" onClick="{{ row.open }}" style="{{ row.rowStyle }}">
+            <span style="font-family:var(--font-heading);font-size:22px;width:34px;flex:none;color:var(--color-accent-700);line-height:1.1">{{ row.num }}</span>
+            <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+              <span style="font-family:var(--font-heading);font-size:17px;color:var(--color-text)">{{ row.name }}</span>
+              <span class="text-muted" style="font-size:12.5px;text-wrap:pretty">{{ row.question }}</span>
+            </span>
+            <span style="width:190px;flex:none;display:flex;flex-direction:column;gap:3px">
+              <code style="font-size:11px;color:var(--color-accent-700)">{{ row.route }}</code>
+              <span class="text-muted" style="font-size:11px">{{ row.datasets }}</span>
+            </span>
+            <span style="width:150px;flex:none;font-size:11px;color:color-mix(in srgb, var(--color-text) 62%, transparent);text-align:right">{{ row.status }}</span>
+          </a>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-6);border-top:1px solid var(--color-divider);padding-top:var(--space-6)">
+      <div style="display:flex;flex-direction:column;gap:var(--space-2)">
+        <span class="text-muted" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase">Shell</span>
+        <span style="font-size:13.5px;text-wrap:pretty">Persistent left rail. Eleven screens is past top-nav capacity, so the rail carries the whole map at all times.</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:var(--space-2)">
+        <span class="text-muted" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase">Drill</span>
+        <span style="font-size:13.5px;text-wrap:pretty">Breadcrumb plus in-place table replacement. The drill never opens a new screen; it deepens the one you are on.</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:var(--space-2)">
+        <span class="text-muted" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase">Access</span>
+        <span style="font-size:13.5px;text-wrap:pretty">One route set. Write controls are gated by link type — an edit link shows them, a view link shows the resulting values instead.</span>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:var(--space-4);align-items:center;border-top:1px solid var(--color-divider);padding-top:var(--space-6)">
+      <a class="btn btn-secondary" href="#" onClick="{{ openBoard }}">See all 17 frames on the wireframe board →</a>
+      <span class="text-muted" style="font-size:12px">The board is the full-fidelity source; this index and the shell read from it.</span>
+    </div>
+
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ atBoard }}" hint-placeholder-val="{{ false }}">
+<div style="min-height:100vh;background:var(--color-bg);display:flex;flex-direction:column">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);padding:var(--space-3) var(--space-6);border-bottom:1px solid var(--color-text);position:sticky;top:0;background:var(--color-bg);z-index:5">
+    <div style="display:flex;align-items:baseline;gap:var(--space-3)">
+      <span style="font-family:var(--font-heading);font-size:17px;font-weight:600">Wireframe board</span>
+      <span class="text-muted" style="font-size:12px">all 17 frames at full fidelity</span>
+    </div>
+    <div style="display:flex;gap:var(--space-3)">
+      <a class="btn btn-ghost" href="#" onClick="{{ openContents }}">← Contents</a>
+      <a class="btn btn-secondary" href="#" onClick="{{ openHome }}">Open the app shell</a>
+    </div>
+  </div>
+  <dc-import name="FP&amp;A Wireframe" hint-size="100%,1400px"></dc-import>
+</div>
+</sc-if>
+
+<sc-if value="{{ atApp }}" hint-placeholder-val="{{ false }}">
+<div style="min-height:100vh;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body);display:flex;align-items:stretch">
+
+  <nav style="width:224px;flex:none;border-right:1px solid var(--color-divider);padding:var(--space-4) 0 var(--space-3);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow:auto">
+    <div style="padding:0 var(--space-4) var(--space-2)">
+      <div style="font-family:var(--font-heading);font-weight:600;font-size:17px">FP&amp;A Model</div>
+      <div class="text-muted" style="font-size:11px">{{ railNote }}</div>
+    </div>
+    <a href="#" onClick="{{ openContents }}" style="display:flex;align-items:center;gap:8px;padding:5px var(--space-4);margin-bottom:var(--space-1);font-size:12px;color:var(--color-accent-700)">← Contents</a>
+    <sc-for list="{{ nav }}" as="n" hint-placeholder-count="16">
+      <a class="{{ n.cls }}" href="#" onClick="{{ n.open }}" style="{{ n.s }}"><span style="{{ n.ns }}">{{ n.num }}</span>{{ n.label }}</a>
+    </sc-for>
+    <div style="margin-top:auto;padding:var(--space-4) var(--space-4) 0;border-top:1px solid var(--color-divider);display:flex;flex-direction:column;gap:2px">
+      <div class="text-muted" style="font-size:11px">Refreshed 04 Feb 2026, 06:00</div>
+      <a href="#" onClick="{{ openData }}" style="font-size:11px">3 data issues flagged →</a>
+    </div>
+  </nav>
+
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);padding:var(--space-3) var(--space-6);border-bottom:1px solid var(--color-divider)">
+      <div>
+        <h4 style="margin:0">{{ screenName }}</h4>
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;padding-top:1px"><span class="text-muted">Showing</span><span style="font-family:var(--font-heading);font-size:12px">{{ scopeLine }}</span></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:var(--space-3)">
+        <span class="tag tag-neutral">{{ linkBadge }}</span>
+        <sc-if value="{{ canEdit }}" hint-placeholder-val="{{ true }}">
+          <a class="btn btn-secondary" href="#" onClick="{{ openReports }}">Compile to report</a>
+        </sc-if>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:flex-end;gap:var(--space-4);padding:var(--space-3) var(--space-6);border-bottom:1px solid var(--color-divider);background:color-mix(in srgb, var(--color-text) 3%, transparent)">
+      <div class="field" style="width:200px">
+        <label>Territory</label>
+        <select class="input"><option>All territories (7)</option><option>USA</option><option>Canada</option><option>UK</option><option>Germany</option><option>France</option><option>Australia</option><option>New Zealand</option></select>
+      </div>
+      <div class="field" style="width:120px">
+        <label>Fiscal year</label>
+        <select class="input"><option>FY2025</option><option>FY2024</option><option>FY2023</option></select>
+      </div>
+      <div class="field" style="width:150px">
+        <label>Period</label>
+        <select class="input"><option>Full year</option><option>H2 · Jul–Dec</option><option>Q4 · Oct–Dec</option><option>Dec</option></select>
+      </div>
+      <div class="field">
+        <label>Currency</label>
+        <div class="seg">
+          <label class="seg-opt"><input type="radio" name="curidx" checked="checked" /><span>USD (reporting)</span></label>
+          <label class="seg-opt" style="opacity:.45;cursor:not-allowed"><input type="radio" name="curidx" disabled="disabled" /><span>Local</span></label>
+        </div>
+      </div>
+      <div class="text-muted" style="margin-left:auto;font-size:11px;max-width:26ch;text-align:right">Local currency unlocks once a single territory is selected</div>
+      <a class="btn btn-secondary" href="#" style="flex:none">Recalculate</a>
+    </div>
+
+    <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+    <div style="padding:var(--space-6);display:flex;flex-direction:column;gap:var(--space-6)">
+      <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--space-4)">
+        <div class="card blueprint"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div class="card-kicker">Revenue</div>
+          <div style="font-family:var(--font-heading);font-size:30px;line-height:1">$48.2M</div>
+          <div class="card-meta">Budget $50.1M · <span style="color:var(--color-accent-800)">−3.8%</span></div>
+          <svg viewBox="0 0 100 24" preserveAspectRatio="none" style="width:100%;height:24px;display:block" aria-hidden="true"><polyline points="0,18 14,16 28,12 42,14 57,10 71,8 85,11 100,6" fill="none" stroke="var(--color-accent)" stroke-width="1.5" vector-effect="non-scaling-stroke"></polyline></svg>
+        </div>
+        <div class="card blueprint"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div class="card-kicker">EBITDA</div>
+          <div style="font-family:var(--font-heading);font-size:30px;line-height:1">$11.2M</div>
+          <div class="card-meta">Budget $12.1M · <span style="color:var(--color-accent-800)">−7.4% ⚠</span></div>
+          <svg viewBox="0 0 100 24" preserveAspectRatio="none" style="width:100%;height:24px;display:block" aria-hidden="true"><polyline points="0,8 14,9 28,7 42,11 57,13 71,12 85,16 100,17" fill="none" stroke="var(--color-accent)" stroke-width="1.5" vector-effect="non-scaling-stroke"></polyline></svg>
+        </div>
+        <div class="card blueprint"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div class="card-kicker">EBITDA margin</div>
+          <div style="font-family:var(--font-heading);font-size:30px;line-height:1">23.2%</div>
+          <div class="card-meta">Budget 24.2% · −1.0 pt</div>
+          <svg viewBox="0 0 100 24" preserveAspectRatio="none" style="width:100%;height:24px;display:block" aria-hidden="true"><polyline points="0,10 14,10 28,9 42,11 57,12 71,12 85,13 100,14" fill="none" stroke="var(--color-accent)" stroke-width="1.5" vector-effect="non-scaling-stroke"></polyline></svg>
+        </div>
+        <div class="card blueprint"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div class="card-kicker">Net profit</div>
+          <div style="font-family:var(--font-heading);font-size:30px;line-height:1">$6.7M</div>
+          <div class="card-meta">Budget $7.4M · <span style="color:var(--color-accent-800)">−9.5% ⚠</span></div>
+          <svg viewBox="0 0 100 24" preserveAspectRatio="none" style="width:100%;height:24px;display:block" aria-hidden="true"><polyline points="0,9 14,11 28,10 42,13 57,12 71,15 85,14 100,17" fill="none" stroke="var(--color-accent)" stroke-width="1.5" vector-effect="non-scaling-stroke"></polyline></svg>
+        </div>
+        <div class="card blueprint"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div class="card-kicker">Operating cash flow</div>
+          <div style="font-family:var(--font-heading);font-size:30px;line-height:1">$9.4M</div>
+          <div class="card-meta">Prior year $8.8M · +6.8%</div>
+          <svg viewBox="0 0 100 24" preserveAspectRatio="none" style="width:100%;height:24px;display:block" aria-hidden="true"><polyline points="0,17 14,15 28,16 42,12 57,13 71,9 85,8 100,5" fill="none" stroke="var(--color-accent)" stroke-width="1.5" vector-effect="non-scaling-stroke"></polyline></svg>
+        </div>
+      </div>
+
+      <div class="blueprint" style="padding:var(--space-4) var(--space-6) var(--space-3);display:flex;flex-direction:column;gap:var(--space-4)">
+        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:var(--space-6)">
+          <div>
+            <h5 style="margin:0">Sales — actual against budget</h5>
+            <div class="text-muted" style="font-size:11px">All territories · FY2025 · USD millions</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:var(--space-6)">
+            <div style="display:flex;gap:var(--space-4);font-size:11px">
+              <span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;background:var(--color-accent);display:block"></span>Actual</span>
+              <span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;background:var(--color-accent-300);display:block"></span>Budget</span>
+            </div>
+            <div class="seg">
+              <label class="seg-opt"><input type="radio" name="plmodeidx" checked="checked" /><span>Monthly</span></label>
+              <label class="seg-opt"><input type="radio" name="plmodeidx" /><span>Cumulative</span></label>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:var(--space-3)">
+          <div class="text-muted" style="width:32px;flex:none;height:190px;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-end;font-size:10px"><span>5.0</span><span>3.8</span><span>2.5</span><span>1.3</span><span>0</span></div>
+          <div style="flex:1;min-width:0;height:190px;position:relative">
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:space-between">
+              <div style="height:1px;background:var(--color-divider)"></div>
+              <div style="height:1px;background:var(--color-divider)"></div>
+              <div style="height:1px;background:var(--color-divider)"></div>
+              <div style="height:1px;background:var(--color-divider)"></div>
+              <div style="height:1px;background:var(--color-text)"></div>
+            </div>
+            <div style="position:absolute;inset:0;display:flex;align-items:flex-end;gap:var(--space-3)">
+              <div style="flex:1;height:100%;display:flex;align-items:flex-end;justify-content:center;gap:3px"><div style="width:42%;height:72%;background:var(--color-accent)"></div><div style="width:42%;height:76%;background:var(--color-accent-300)"></div></div>
+              <div style="flex:1;height:100%;display:flex;align-items:flex-end;justify-content:center;gap:3px"><div style="width:42%;height:74%;background:var(--color-accent)"></div><div style="width:42%;height:78%;background:var(--color-accent-300)"></div></div>
+              <div style="flex:1;height:100%;display:flex;align-items:flex-end;justify-content:center;gap:3px"><div style="width:42%;height:82%;background:var(--color-accent)"></div><div style="width:42%;height:84%;background:var(--color-accent-300)"></div></div>
+              <div style="flex:1;height:100%;display:flex;align-items:flex-end;justify-content:center;gap:3px"><div style="width:42%;height:78%;background:var(--color-accent)"></div><div style="width:42%;height:82%;background:var(--color-accent-300)"></div></div>
+              <div style="flex:1;height:100%;display:flex;align-items:flex-end;justify-content:center;gap:3px"><div style="width:42%;height:80%;background:var(--color-accent)"></div><div style="width:42%;height:84%;background:var(--color-accent-300)"></div></div>
+              <div style="flex:1;height:100%;display:flex;align-items:flex-end;justify-content:center;gap:3px"><div style="width:42%;height:84%;background:var(--color-accent)"></div><div style="width:42%;height:86%;background:var(--color-accent-300)"></div></div>
+              <div style="flex:1;height:100%;display:flex;align-items:flex-end;justify-content:center;gap:3px"><div style="width:42%;height:76%;background:var(--color-accent)"></div><div style="width:42%;height:82%;background:var(--color-accent-300)"></div></div>
+              <div style="flex:1;height:100%;display:flex;align-items:flex-end;justify-content:center;gap:3px"><div style="width:42%;height:78%;background:var(--color-accent)"></div><div style="width:42%;height:82%;background:var(--color-accent-300)"></div></div>
+              <div style="flex:1;height:100%;display:flex;align-items:flex-end;justify-content:center;gap:3px"><div style="width:42%;height:86%;background:var(--color-accent)"></div><div style="width:42%;height:86%;background:var(--color-accent-300)"></div></div>
+              <div style="flex:1;height:100%;display:flex;align-items:flex-end;justify-content:center;gap:3px"><div style="width:42%;height:82%;background:var(--color-accent)"></div><div style="width:42%;height:86%;background:var(--color-accent-300)"></div></div>
+              <div style="flex:1;height:100%;display:flex;align-items:flex-end;justify-content:center;gap:3px"><div style="width:42%;height:84%;background:var(--color-accent)"></div><div style="width:42%;height:86%;background:var(--color-accent-300)"></div></div>
+              <div style="flex:1;height:100%;display:flex;align-items:flex-end;justify-content:center;gap:3px"><div style="width:42%;height:88%;background:var(--color-accent)"></div><div style="width:42%;height:90%;background:var(--color-accent-300)"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="text-muted" style="display:flex;gap:var(--space-3);padding-left:calc(32px + var(--space-3));font-size:10px;letter-spacing:.06em;text-transform:uppercase">
+          <span style="flex:1;text-align:center">Jan</span><span style="flex:1;text-align:center">Feb</span><span style="flex:1;text-align:center">Mar</span><span style="flex:1;text-align:center">Apr</span><span style="flex:1;text-align:center">May</span><span style="flex:1;text-align:center">Jun</span><span style="flex:1;text-align:center">Jul</span><span style="flex:1;text-align:center">Aug</span><span style="flex:1;text-align:center">Sep</span><span style="flex:1;text-align:center">Oct</span><span style="flex:1;text-align:center">Nov</span><span style="flex:1;text-align:center">Dec</span>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1.35fr 1fr;gap:var(--space-6);align-items:start">
+        <div style="display:flex;flex-direction:column;gap:var(--space-3)">
+          <div style="display:flex;align-items:baseline;justify-content:space-between">
+            <h5 style="margin:0">P&amp;L summary by territory</h5>
+            <a href="#" onClick="{{ openPL }}" style="font-size:12px">Open full P&amp;L →</a>
+          </div>
+          <table class="table">
+            <thead><tr><th>Territory</th><th style="text-align:right">Sales</th><th style="text-align:right">Gross profit</th><th style="text-align:right">EBITDA</th><th style="text-align:right">Net profit</th></tr></thead>
+            <tbody>
+              <tr><td>USA</td><td style="text-align:right">$18.6M</td><td style="text-align:right">$11.2M</td><td style="text-align:right">$4.6M</td><td style="text-align:right">$2.8M</td></tr>
+              <tr><td>Canada</td><td style="text-align:right">$6.2M</td><td style="text-align:right">$3.7M</td><td style="text-align:right">$1.5M</td><td style="text-align:right">$0.9M</td></tr>
+              <tr><td>UK</td><td style="text-align:right">$7.8M</td><td style="text-align:right">$4.6M</td><td style="text-align:right">$1.9M</td><td style="text-align:right">$1.1M</td></tr>
+              <tr><td>Germany</td><td style="text-align:right">$6.4M</td><td style="text-align:right">$3.8M</td><td style="text-align:right">$1.4M</td><td style="text-align:right">$0.8M</td></tr>
+              <tr><td>France</td><td style="text-align:right">$4.1M</td><td style="text-align:right">$2.4M</td><td style="text-align:right">$0.8M</td><td style="text-align:right">$0.5M</td></tr>
+              <tr><td>Australia</td><td style="text-align:right">$3.4M</td><td style="text-align:right">$2.0M</td><td style="text-align:right">$0.7M</td><td style="text-align:right">$0.4M</td></tr>
+              <tr><td>New Zealand</td><td style="text-align:right">$1.7M</td><td style="text-align:right">$1.1M</td><td style="text-align:right">$0.3M</td><td style="text-align:right">$0.2M</td></tr>
+              <tr style="font-weight:600;background:color-mix(in srgb, var(--color-accent) 8%, transparent)"><td>Total</td><td style="text-align:right">$48.2M</td><td style="text-align:right">$28.8M</td><td style="text-align:right">$11.2M</td><td style="text-align:right">$6.7M</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:var(--space-3)">
+          <div style="display:flex;align-items:baseline;justify-content:space-between">
+            <h5 style="margin:0">Requires attention</h5>
+            <span class="text-muted" style="font-size:11px">beyond ±5% of budget</span>
+          </div>
+          <table class="table">
+            <thead><tr><th>Territory · line</th><th style="text-align:right">Var $</th><th style="text-align:right">Var %</th></tr></thead>
+            <tbody>
+              <tr><td><a href="#" onClick="{{ openVariance }}">USA · EBITDA</a></td><td style="text-align:right">−$0.41M</td><td style="text-align:right;color:var(--color-accent-800)">−8.2% ⚠</td></tr>
+              <tr><td><a href="#" onClick="{{ openVariance }}">Germany · Opex</a></td><td style="text-align:right">+$0.28M</td><td style="text-align:right;color:var(--color-accent-800)">+11.4% ⚠</td></tr>
+              <tr><td><a href="#" onClick="{{ openVariance }}">UK · Sales</a></td><td style="text-align:right">−$0.52M</td><td style="text-align:right;color:var(--color-accent-800)">−6.3% ⚠</td></tr>
+              <tr><td><a href="#" onClick="{{ openVariance }}">France · Net profit</a></td><td style="text-align:right">−$0.09M</td><td style="text-align:right;color:var(--color-accent-800)">−15.3% ⚠</td></tr>
+              <tr><td><a href="#" onClick="{{ openVariance }}">NZ · Cost of Sales</a></td><td style="text-align:right">+$0.07M</td><td style="text-align:right;color:var(--color-accent-800)">+9.1% ⚠</td></tr>
+            </tbody>
+          </table>
+          <a class="btn btn-secondary btn-block" href="#" onClick="{{ openVariance }}">Rank all variances →</a>
+        </div>
+      </div>
+
+      <div class="text-muted" style="font-size:12px;max-width:110ch;text-wrap:pretty;border-top:1px solid var(--color-divider);padding-top:var(--space-4)">Clicking a KPI card or a flagged row leaves the filter intact and lands on the screen that explains it — KPI → P&amp;L, flagged row → Variance Analysis with that row preselected.</div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isOther }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:var(--space-6);display:flex;flex-direction:column;gap:var(--space-6)">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-8);border-bottom:1px solid var(--color-divider);padding-bottom:var(--space-4)">
+        <div style="display:flex;flex-direction:column;gap:var(--space-2);max-width:70ch">
+          <span class="text-muted" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase">The question this screen answers</span>
+          <span style="font-family:var(--font-heading);font-size:24px;line-height:1.2;text-wrap:pretty">{{ screenQuestion }}</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:var(--space-3);flex:none;align-items:flex-end;text-align:right">
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <span class="text-muted" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase">Route</span>
+            <code style="font-size:12px;color:var(--color-accent-700)">{{ screenRoute }}</code>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <span class="text-muted" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase">Reads</span>
+            <span style="font-size:12px">{{ screenDatasets }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:var(--space-4)">
+        <div style="display:flex;align-items:baseline;justify-content:space-between">
+          <h5 style="margin:0">What this screen contains</h5>
+          <span class="text-muted" style="font-size:11px">{{ screenStatus }}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:var(--space-4)">
+          <sc-for list="{{ screenBlocks }}" as="b" hint-placeholder-count="4">
+            <div class="card blueprint"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+              <div class="card-kicker">{{ b.kind }}</div>
+              <div class="card-title">{{ b.name }}</div>
+              <p class="card-body">{{ b.note }}</p>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div class="blueprint" style="padding:var(--space-6);display:flex;align-items:center;justify-content:space-between;gap:var(--space-6)">
+        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <div style="display:flex;flex-direction:column;gap:var(--space-1);max-width:72ch">
+          <span style="font-family:var(--font-heading);font-size:17px">The built layout lives on the wireframe board</span>
+          <span class="text-muted" style="font-size:12.5px;text-wrap:pretty">This shell carries the rail, the filter bar and the scope line for every screen. {{ screenName }} is drawn in full — tables, charts and states — on the board, which stays the single source of truth.</span>
+        </div>
+        <a class="btn btn-primary blueprint" href="#" onClick="{{ openBoard }}" style="flex:none"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>Open on the board →</a>
+      </div>
+    </div>
+    </sc-if>
+
+  </div>
+</div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:1000},&quot;startView&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Contents&quot;,&quot;Executive Overview&quot;],&quot;default&quot;:&quot;Contents&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Index&quot;},&quot;linkMode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Edit link&quot;,&quot;View link&quot;],&quot;default&quot;:&quot;Edit link&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Index&quot;}}">
+const NAV = [
+  ["g", "Overview"],
+  ["01", "Executive Overview"],
+  ["g", "Statements"],
+  ["02", "P&L"], ["03", "Balance Sheet"], ["04", "Cash Flow"],
+  ["g", "Variance"],
+  ["05", "Budget vs Actual"], ["06", "Variance Analysis"],
+  ["g", "Planning"],
+  ["07", "Scenario Modelling"], ["08", "Forecast"], ["09", "Territory Performance"],
+  ["g", "Output"],
+  ["10", "Reports"], ["11", "Data Library"],
+];
+
+const S = {
+  group: "display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-accent-700);padding:var(--space-4) var(--space-4) var(--space-1);text-decoration:none",
+  idle: "display:flex;align-items:center;gap:9px;padding:5px var(--space-4);font-size:13px;color:color-mix(in srgb, var(--color-text) 78%, transparent);text-decoration:none;border-left:2px solid transparent;cursor:pointer",
+  active: "display:flex;align-items:center;gap:9px;padding:5px var(--space-4);font-size:13px;color:var(--color-accent-900);text-decoration:none;border-left:2px solid var(--color-accent);background:var(--color-accent-100);font-weight:600",
+  numIdle: "font-family:var(--font-heading);font-size:11px;width:16px;flex:none;color:color-mix(in srgb, var(--color-text) 45%, transparent)",
+  numActive: "font-family:var(--font-heading);font-size:11px;width:16px;flex:none;color:var(--color-accent-700)",
+  hide: "display:none",
+};
+
+const ROW = "display:flex;align-items:flex-start;gap:var(--space-4);padding:var(--space-4) var(--space-6);border-bottom:1px solid var(--color-divider);text-decoration:none;color:var(--color-text)";
+const ROW_LAST = ROW.replace("border-bottom:1px solid var(--color-divider);", "");
+
+const SCREENS = {
+  "01": {
+    question: "Are we on track, what is off target, and what requires my attention?",
+    route: "/", datasets: "Budget · GL · Territory", status: "Built",
+    scope: "All territories · FY2025 · Full year · USD",
+    blocks: [],
+  },
+  "02": {
+    question: "What is driving our profitability?",
+    route: "/pl", datasets: "GL · Chart of Accounts · Budget", status: "Built · drills to GL depth",
+    scope: "USA · FY2025 · Full year · USD",
+    blocks: [
+      { kind: "Table", name: "P&L, 11 lines", note: "Actual, budget and variance by line, with drillable lines opening a Chart of Accounts subtree in place." },
+      { kind: "Chart", name: "EBITDA margin trend", note: "Percent of sales by month, drawn as a hairline trend against the budget margin." },
+      { kind: "Drill", name: "Breadcrumb to GL depth", note: "Line → account group → account → the underlying GL transactions, each replacing the table in place." },
+    ],
+  },
+  "03": {
+    question: "What has changed in our financial position?",
+    route: "/balance-sheet", datasets: "Trial Balance · Chart of Accounts", status: "Built · ±3% materiality",
+    scope: "USA · 31 Dec 2025 vs 31 Dec 2024 · USD",
+    blocks: [
+      { kind: "Table", name: "Position", note: "Assets, liabilities and equity at both dates, with the movement and its percentage flagged past ±3%." },
+      { kind: "Table", name: "Supporting figures", note: "Working capital, current ratio and net debt, derived from the position above." },
+      { kind: "Chart", name: "Composition", note: "Every bar drawn against total assets, so liabilities and equity together fill the same width." },
+    ],
+  },
+  "04": {
+    question: "Where did the cash go, and does it reconcile to the GL?",
+    route: "/cash-flow", datasets: "CashFlow_St · GL", status: "Built · no drill yet",
+    scope: "USA · FY2025 · Full year · USD",
+    blocks: [
+      { kind: "Chart", name: "Cash bridge", note: "Opening cash to closing cash, stepping through operating, investing and financing." },
+      { kind: "Table", name: "Statement", note: "Indirect method, FY2025 against FY2024, reconciled to the GL cash balance." },
+      { kind: "Known gap", name: "No drill on this screen", note: "The lines are hand-defined statement groupings rather than a Chart of Accounts subtree, so the drill engine does not apply." },
+    ],
+  },
+  "05": {
+    question: "Where did we miss or exceed budget, and why?",
+    route: "/budget-vs-actual", datasets: "Budget · GL", status: "Built · carries AI commentary",
+    scope: "USA · FY2025 · Full year · USD",
+    blocks: [
+      { kind: "Table", name: "All 11 P&L lines", note: "Actual against budget with variance in dollars and percent, flagged past ±5%, drillable into the P&L." },
+      { kind: "Panel", name: "AI commentary", note: "Sends the figures on screen — EBITDA as the focus line, the full P&L as context — and returns what happened. Not saved." },
+    ],
+  },
+  "06": {
+    question: "Which variances matter most, across every territory at once?",
+    route: "/variance", datasets: "Budget · GL · Currency_data", status: "Built · carries AI commentary",
+    scope: "All territories in USD · no territory filter",
+    blocks: [
+      { kind: "Table", name: "Top 15 variances", note: "Every territory × P&L-line combination ranked by absolute USD value, row one selected by default." },
+      { kind: "Chart", name: "Variance bridge", note: "Driver contributions for the selected row, inline on this screen rather than a separate page." },
+      { kind: "Panel", name: "AI commentary", note: "Same mechanism as Budget vs Actual, focused on the selected ranked row and its bridge." },
+    ],
+  },
+  "07": {
+    question: "What happens to the year if our assumptions change?",
+    route: "/scenarios", datasets: "Calculations BI · Budget", status: "Built · first screen with write actions",
+    scope: "USA · FY2025 · custom scenario, unsaved",
+    blocks: [
+      { kind: "Controls", name: "Assumptions", note: "Growth, price, cost and headcount levers, with the Base Case shown in grey behind each input." },
+      { kind: "Table", name: "Scenario vs Base Case", note: "Recalculated live by the same engine that produces the P&L, so the two always agree." },
+      { kind: "Access", name: "Write actions gated", note: "Save, duplicate and delete appear on an edit link. A view link shows the saved assumptions as values instead." },
+    ],
+  },
+  "08": {
+    question: "Based on what we know today, where will we finish the year?",
+    route: "/forecast", datasets: "GL · Budget · Calendar", status: "Built · budget-based method",
+    scope: "USA · FY2025 · version FC-08 · USD",
+    blocks: [
+      { kind: "Chart", name: "Budget to forecast bridge", note: "Budget EBITDA 5.01, less a 1.20 sales shortfall, plus 0.32 Cost of Sales and 0.18 Opex recovery, to a 4.31 forecast." },
+      { kind: "Table", name: "Actual to Jul · forecast Aug–Dec", note: "Remaining months take budget adjusted by the named drivers, with the period split drawn per line." },
+      { kind: "Table", name: "Version history", note: "Each version's full-year EBITDA, its move against the prior version, and its variance to budget." },
+    ],
+  },
+  "09": {
+    question: "Which territories are performing, once currency is set aside?",
+    route: "/territories", datasets: "Territory · Currency_data", status: "FX split not built yet",
+    scope: "All 7 territories · local currency and USD",
+    blocks: [
+      { kind: "Chart", name: "KPIs by territory", note: "EBITDA margin read against a 30% ceiling, so seven currencies stay comparable side by side." },
+      { kind: "Chart", name: "FX impact", note: "Operational performance separated from currency movement. Needs revenue restated at a constant rate — the one genuinely new calculation." },
+      { kind: "Navigation", name: "Territory handoff", note: "Clicking a territory opens it pre-filtered on Executive Overview, filter intact." },
+    ],
+  },
+  "10": {
+    question: "What do we send out, and what exactly will it contain?",
+    route: "/reports", datasets: "every dataset above", status: "Built · frozen snapshots",
+    scope: "All territories · FY2025 · Monthly management pack",
+    blocks: [
+      { kind: "Controls", name: "Compose", note: "Report type, period, territory and section selection, assembled before anything is generated." },
+      { kind: "Preview", name: "Page 1 of 6", note: "Exactly what the PDF will contain, rendered at page proportions." },
+      { kind: "Rule", name: "Never re-run", note: "A generated report is a frozen snapshot. Re-running produces a new version rather than updating the old one." },
+    ],
+  },
+  "11": {
+    question: "Is the data behind all of this trustworthy?",
+    route: "/data", datasets: "all 10 source files", status: "Built · 3 issues flagged",
+    scope: "9 datasets connected · no period filter applies",
+    blocks: [
+      { kind: "Table", name: "Connected datasets", note: "Source file, last refresh and validation status for each of the ten workbooks." },
+      { kind: "Detail", name: "Flagged issues", note: "Named row by row for the selected dataset, so a failure points at the cell that caused it." },
+      { kind: "Source", name: "Feeds every screen", note: "Nothing above renders until its datasets validate. A failure surfaces as an empty-state on the screen that needed it." },
+    ],
+  },
+};
+
+class Component extends DCLogic {
+  state = { view: null };
+
+  view() {
+    return this.state.view ?? (this.props.startView === "Executive Overview" ? "01" : "contents");
+  }
+
+  go(v) {
+    return (e) => { if (e) e.preventDefault(); this.setState({ view: v }); };
+  }
+
+  renderVals() {
+    const view = this.view();
+    const canEdit = (this.props.linkMode ?? "Edit link") === "Edit link";
+    const active = SCREENS[view];
+
+    const nav = NAV.map(([num, label]) => {
+      if (num === "g") return { num: "", label, s: S.group, ns: S.hide, cls: "", open: (e) => e && e.preventDefault() };
+      const on = num === view;
+      return {
+        num, label, cls: on ? "" : "rail-item",
+        s: on ? S.active : S.idle,
+        ns: on ? S.numActive : S.numIdle,
+        open: this.go(num),
+      };
+    });
+
+    const keys = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11"];
+    const index = keys.map((k, i) => {
+      const s = SCREENS[k];
+      const label = (NAV.find(([n]) => n === k) || [k, k])[1];
+      return {
+        num: k, name: label, question: s.question, route: s.route,
+        datasets: s.datasets, status: s.status,
+        rowStyle: i === keys.length - 1 ? ROW_LAST : ROW,
+        open: this.go(k),
+      };
+    });
+
+    return {
+      atContents: view === "contents",
+      atBoard: view === "board",
+      atApp: view !== "contents" && view !== "board",
+      isHome: view === "01",
+      isOther: !!active && view !== "01",
+      nav, index,
+      canEdit,
+      linkBadge: canEdit ? "Edit link · FP&A team" : "View link · read-only",
+      railNote: canEdit ? "Live from GL · no login" : "View link · read-only",
+      screenName: active ? (NAV.find(([n]) => n === view) || ["", ""])[1] : "",
+      scopeLine: active ? active.scope : "",
+      screenQuestion: active ? active.question : "",
+      screenRoute: active ? active.route : "",
+      screenDatasets: active ? active.datasets : "",
+      screenStatus: active ? active.status : "",
+      screenBlocks: active ? active.blocks : [],
+      openContents: this.go("contents"),
+      openBoard: this.go("board"),
+      openHome: this.go("01"),
+      openPL: this.go("02"),
+      openVariance: this.go("06"),
+      openReports: this.go("10"),
+      openData: this.go("11"),
+    };
+  }
+}
+</script>
+</body>
+</html>

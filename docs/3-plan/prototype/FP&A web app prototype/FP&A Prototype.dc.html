@@ -1,0 +1,2287 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="fpa-theme.css">
+  <script src="fpa-data.js"></script>
+  <script src="fpa-bs.js"></script>
+  <style>
+    a { color: var(--color-accent-600); text-decoration: none; }
+    a:hover { color: var(--color-accent-800); }
+    .rail-item:hover { background: var(--color-accent-100); }
+    .drillable:hover { background: var(--color-accent-200) !important; cursor: pointer; }
+    .sortable:hover { color: var(--color-accent-700); cursor: pointer; }
+    .rowpick:hover { background: var(--color-accent-200) !important; cursor: pointer; }
+    table.table td:first-child, table.table th:first-child { min-width: 15ch; }
+    @media print { .noprint { display: none !important; } }
+  </style>
+</helmet>
+
+<div style="min-height:100vh;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body);display:flex;align-items:stretch">
+
+  <nav class="noprint" style="width:240px;background:var(--color-surface);flex:none;border-right:1px solid var(--color-divider);padding:var(--space-4) 0 var(--space-3);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow:auto">
+    <div style="padding:0 var(--space-4) var(--space-2)">
+      <div style="font-family:var(--font-heading);font-weight:600;font-size:17px">FP&amp;A Model</div>
+      <div class="text-muted" style="font-size:11px">{{ railNote }}</div>
+    </div>
+    <sc-for list="{{ nav }}" as="n" hint-placeholder-count="16">
+      <a class="{{ n.cls }}" href="#" onClick="{{ n.open }}" style="{{ n.s }}"><span style="{{ n.ns }}">{{ n.num }}</span>{{ n.label }}</a>
+    </sc-for>
+    <div style="margin-top:auto;padding:var(--space-4) var(--space-4) 0;border-top:1px solid var(--color-divider);display:flex;flex-direction:column;gap:var(--space-2)">
+      <div class="text-muted" style="font-size:11px">{{ refreshedLine }}</div>
+      <a href="#" onClick="{{ openData }}" style="font-size:11px">{{ issuesLine }}</a>
+      <div class="seg" style="margin-top:var(--space-2)">
+        <label class="seg-opt" style="font-size:10px"><input type="radio" name="linkmode" checked="{{ isEdit }}" onChange="{{ setEdit }}" /><span>Edit</span></label>
+        <label class="seg-opt" style="font-size:10px"><input type="radio" name="linkmode" checked="{{ isView }}" onChange="{{ setView }}" /><span>View</span></label>
+      </div>
+    </div>
+  </nav>
+
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);padding:var(--space-3) var(--space-6);border-bottom:1px solid var(--color-divider)">
+      <div>
+        <h4 style="margin:0">{{ screenName }}</h4>
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;padding-top:1px"><span class="text-muted">Showing</span><span style="font-family:var(--font-heading);font-size:12px">{{ scopeLine }}</span></div>
+      </div>
+      <div class="noprint" style="display:flex;align-items:center;gap:var(--space-3)">
+        <span class="tag tag-neutral">{{ linkBadge }}</span>
+        <sc-if value="{{ canEdit }}" hint-placeholder-val="{{ true }}">
+          <a class="btn btn-secondary" href="#" onClick="{{ openReports }}">Compile to report</a>
+        </sc-if>
+      </div>
+    </div>
+
+    <div class="noprint" style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:var(--space-4);padding:var(--space-3) var(--space-6);border-bottom:1px solid var(--color-divider);background:var(--color-surface-low)">
+      <div class="field" style="width:200px;flex:none">
+        <label>Territory</label>
+        <select class="input" value="{{ fTerritory }}" onChange="{{ setTerritory }}">
+          <option value="all">All territories (7)</option>
+          <sc-for list="{{ territories }}" as="t" hint-placeholder-count="7">
+            <option value="{{ t.value }}">{{ t.name }}</option>
+          </sc-for>
+        </select>
+      </div>
+      <div class="field" style="width:130px;flex:none">
+        <label>Fiscal year</label>
+        <select class="input" value="{{ fYear }}" onChange="{{ setYear }}">
+          <option value="2025">FY2025</option>
+          <option value="2024">FY2024</option>
+          <option value="2023">FY2023</option>
+        </select>
+      </div>
+      <div class="field" style="width:160px;flex:none">
+        <label>Period</label>
+        <select class="input" value="{{ fPeriod }}" onChange="{{ setPeriod }}">
+          <option value="fy">Full year</option>
+          <option value="h1">H1 · Jan–Jun</option>
+          <option value="h2">H2 · Jul–Dec</option>
+          <option value="q1">Q1 · Jan–Mar</option>
+          <option value="q2">Q2 · Apr–Jun</option>
+          <option value="q3">Q3 · Jul–Sep</option>
+          <option value="q4">Q4 · Oct–Dec</option>
+        </select>
+      </div>
+      <div class="field" style="flex:none">
+        <label>Currency</label>
+        <div class="seg" style="white-space:nowrap">
+          <label class="seg-opt"><input type="radio" name="cur" checked="{{ isUsd }}" onChange="{{ setUsd }}" /><span>USD</span></label>
+          <label class="seg-opt" style="{{ localOptStyle }}"><input type="radio" name="cur" checked="{{ isLocal }}" disabled="{{ localDisabled }}" onChange="{{ setLocal }}" /><span>{{ localLabel }}</span></label>
+        </div>
+      </div>
+      <a class="btn btn-secondary" href="#" onClick="{{ recalculate }}" style="flex:none">{{ recalcLabel }}</a>
+      <div class="text-muted" style="flex:1 1 22ch;min-width:22ch;font-size:11px;text-align:right">{{ currencyNote }}</div>
+    </div>
+
+    <sc-if value="{{ blocked }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:var(--space-8) var(--space-6);display:flex;justify-content:center">
+        <div class="blueprint" style="padding:var(--space-8);max-width:60ch;display:flex;flex-direction:column;gap:var(--space-3);align-items:flex-start">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <span class="tag tag-outline">Validation failure</span>
+          <h4 style="margin:0">{{ blockedTitle }}</h4>
+          <p style="margin:0;font-size:14px;text-wrap:pretty">{{ blockedBody }}</p>
+          <a class="btn btn-primary blueprint" href="#" onClick="{{ openData }}"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>Open the Data Library →</a>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ showExec }}" hint-placeholder-val="{{ true }}">
+    <div style="padding:var(--space-6);display:flex;flex-direction:column;gap:var(--space-6)">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:var(--space-4)">
+        <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="5">
+          <div class="card blueprint"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <div class="card-kicker">{{ k.label }}</div>
+            <div style="font-family:var(--font-data);font-weight:600;font-size:28px;letter-spacing:-0.02em;line-height:1.15">{{ k.value }}</div>
+            <div class="card-meta" style="display:flex;flex-wrap:wrap;gap:0 5px"><span style="white-space:nowrap">{{ k.budgetLabel }}</span><span style="{{ k.varStyle }};white-space:nowrap">· {{ k.varLabel }}</span></div>
+            <svg viewBox="0 0 100 24" preserveAspectRatio="none" style="width:100%;height:24px;display:block" aria-hidden="true"><polyline points="{{ k.spark }}" fill="none" stroke="var(--color-accent)" stroke-width="1.5" vector-effect="non-scaling-stroke"></polyline></svg>
+          </div>
+        </sc-for>
+      </div>
+
+      <div class="blueprint" style="padding:var(--space-4) var(--space-6) var(--space-3);display:flex;flex-direction:column;gap:var(--space-4)">
+        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:var(--space-6)">
+          <div>
+            <h5 style="margin:0">{{ barsTitle }}</h5>
+            <div class="text-muted" style="font-size:11px">{{ barsSub }}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:var(--space-6)">
+            <div style="display:flex;gap:var(--space-4);font-size:11px">
+              <span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;background:var(--color-accent);display:block"></span>Actual</span>
+              <span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;background:var(--color-accent-300);display:block"></span>Budget</span>
+            </div>
+            <div class="seg">
+              <label class="seg-opt"><input type="radio" name="plmode" checked="{{ isMonthly }}" onChange="{{ setMonthly }}" /><span>Monthly</span></label>
+              <label class="seg-opt"><input type="radio" name="plmode" checked="{{ isCumulative }}" onChange="{{ setCumulative }}" /><span>Cumulative</span></label>
+            </div>
+            <div class="field" style="width:150px;margin:0">
+              <select class="input" value="{{ barsLine }}" onChange="{{ setBarsLine }}">
+                <sc-for list="{{ lineOptions }}" as="o" hint-placeholder-count="7">
+                  <option value="{{ o.id }}">{{ o.label }}</option>
+                </sc-for>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:var(--space-3)">
+          <div class="text-muted" style="width:44px;flex:none;height:190px;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-end;font-size:10px">
+            <sc-for list="{{ barsAxis }}" as="a" hint-placeholder-count="5"><span>{{ a }}</span></sc-for>
+          </div>
+          <div style="flex:1;min-width:0;height:190px;position:relative">
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:space-between">
+              <div style="height:1px;background:var(--color-divider)"></div>
+              <div style="height:1px;background:var(--color-divider)"></div>
+              <div style="height:1px;background:var(--color-divider)"></div>
+              <div style="height:1px;background:var(--color-divider)"></div>
+              <div style="height:1px;background:var(--color-text)"></div>
+            </div>
+            <div style="position:absolute;inset:0;display:flex;align-items:flex-end;gap:var(--space-3)">
+              <sc-for list="{{ bars }}" as="b" hint-placeholder-count="12">
+                <div title="{{ b.title }}" style="flex:1;height:100%;display:flex;align-items:flex-end;justify-content:center;gap:3px">
+                  <div style="{{ b.aStyle }}"></div>
+                  <div style="{{ b.bStyle }}"></div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+        <div class="text-muted" style="display:flex;gap:var(--space-3);padding-left:calc(44px + var(--space-3));font-size:10px;letter-spacing:.06em;text-transform:uppercase">
+          <sc-for list="{{ bars }}" as="b" hint-placeholder-count="12"><span style="flex:1;text-align:center">{{ b.month }}</span></sc-for>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:var(--space-6);align-items:start">
+        <div style="display:flex;flex-direction:column;gap:var(--space-3)">
+          <div style="display:flex;align-items:baseline;justify-content:space-between">
+            <h5 style="margin:0">P&amp;L summary by territory</h5>
+            <a href="#" onClick="{{ openPL }}" style="font-size:12px">Open full P&amp;L →</a>
+          </div>
+          <div style="overflow:auto;max-width:100%;max-height:70vh"><table class="table">
+            <thead><tr><th>Territory</th><th style="text-align:right">Sales</th><th style="text-align:right">Gross profit</th><th style="text-align:right">EBITDA</th><th style="text-align:right">Net profit</th></tr></thead>
+            <tbody>
+              <sc-for list="{{ territoryRows }}" as="r" hint-placeholder-count="8">
+                <tr class="{{ r.cls }}" onClick="{{ r.open }}" style="{{ r.style }}">
+                  <td>{{ r.name }}</td>
+                  <td style="text-align:right">{{ r.sales }}</td>
+                  <td style="text-align:right">{{ r.gp }}</td>
+                  <td style="text-align:right">{{ r.ebitda }}</td>
+                  <td style="text-align:right">{{ r.np }}</td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:var(--space-3)">
+          <div style="display:flex;align-items:baseline;justify-content:space-between">
+            <h5 style="margin:0">Requires attention</h5>
+            <span class="text-muted" style="font-size:11px">{{ attentionNote }}</span>
+          </div>
+          <div style="overflow:auto;max-width:100%;max-height:70vh"><table class="table">
+            <thead><tr><th>Territory · line</th><th style="text-align:right">Var</th><th style="text-align:right">Var %</th></tr></thead>
+            <tbody>
+              <sc-for list="{{ attention }}" as="a" hint-placeholder-count="5">
+                <tr class="rowpick" onClick="{{ a.open }}"><td><a href="#">{{ a.label }}</a></td><td style="text-align:right">{{ a.varAbs }}</td><td style="{{ a.varStyle }}">{{ a.varPct }}</td></tr>
+              </sc-for>
+            </tbody>
+          </table></div>
+          <a class="btn btn-secondary btn-block" href="#" onClick="{{ openVariance }}">Rank all variances →</a>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ showPL }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:var(--space-6);display:flex;flex-direction:column;gap:var(--space-6)">
+      <div style="display:flex;align-items:center;gap:var(--space-2);font-size:12px;min-height:22px">
+        <sc-for list="{{ crumbs }}" as="c" hint-placeholder-count="1">
+          <a href="#" onClick="{{ c.open }}" style="{{ c.style }}">{{ c.label }}</a>
+          <span class="text-muted" style="{{ c.sepStyle }}">›</span>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{ atStatement }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;flex-direction:column;gap:var(--space-3)">
+        <div style="display:flex;align-items:baseline;justify-content:space-between">
+          <h5 style="margin:0">Profit and loss</h5>
+          <span class="text-muted" style="font-size:11px">underlined lines drill into the chart of accounts · flagged past ±{{ threshold }}%</span>
+        </div>
+        <div style="overflow:auto;max-width:100%;max-height:70vh"><table class="table">
+          <thead><tr><th style="width:38%">Line</th><th style="text-align:right">Actual</th><th style="text-align:right">Budget</th><th style="text-align:right">Var</th><th style="text-align:right">Var %</th><th style="text-align:right">% of sales</th></tr></thead>
+          <tbody>
+            <sc-for list="{{ plRows }}" as="r" hint-placeholder-count="12">
+              <tr class="{{ r.cls }}" onClick="{{ r.open }}" style="{{ r.rowStyle }}">
+                <td style="{{ r.labelStyle }}">{{ r.label }}</td>
+                <td style="text-align:right">{{ r.actual }}</td>
+                <td style="text-align:right">{{ r.budget }}</td>
+                <td style="text-align:right">{{ r.varAbs }}</td>
+                <td style="{{ r.varStyle }}">{{ r.varPct }}</td>
+                <td class="text-muted" style="text-align:right">{{ r.pctSales }}</td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table></div>
+      </div>
+
+      <div class="blueprint" style="padding:var(--space-4) var(--space-6) var(--space-3);display:flex;flex-direction:column;gap:var(--space-4)">
+        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <div>
+          <h5 style="margin:0">EBITDA margin trend</h5>
+          <div class="text-muted" style="font-size:11px">{{ marginSub }}</div>
+        </div>
+        <div style="display:flex;gap:var(--space-3)">
+          <div class="text-muted" style="width:44px;flex:none;height:150px;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-end;font-size:10px">
+            <sc-for list="{{ marginAxis }}" as="a" hint-placeholder-count="5"><span>{{ a }}</span></sc-for>
+          </div>
+          <div style="flex:1;min-width:0;height:150px;position:relative">
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:space-between">
+              <div style="height:1px;background:var(--color-divider)"></div>
+              <div style="height:1px;background:var(--color-divider)"></div>
+              <div style="height:1px;background:var(--color-divider)"></div>
+              <div style="height:1px;background:var(--color-divider)"></div>
+              <div style="height:1px;background:var(--color-text)"></div>
+            </div>
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%" aria-hidden="true">
+              <polyline points="{{ marginBudgetLine }}" fill="none" stroke="var(--color-accent-300)" stroke-width="1.5" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"></polyline>
+              <polyline points="{{ marginActualLine }}" fill="none" stroke="var(--color-accent)" stroke-width="2" vector-effect="non-scaling-stroke"></polyline>
+            </svg>
+          </div>
+        </div>
+        <div class="text-muted" style="display:flex;gap:var(--space-3);padding-left:calc(44px + var(--space-3));font-size:10px;letter-spacing:.06em;text-transform:uppercase">
+          <sc-for list="{{ marginMonths }}" as="m" hint-placeholder-count="12"><span style="flex:1;text-align:center">{{ m }}</span></sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ atDrill }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:var(--space-3)">
+        <div style="display:flex;align-items:baseline;justify-content:space-between">
+          <h5 style="margin:0">{{ drillTitle }}</h5>
+          <span class="text-muted" style="font-size:11px">{{ drillNote }}</span>
+        </div>
+        <div style="overflow:auto;max-width:100%;max-height:70vh"><table class="table">
+          <thead><tr>
+            <th style="width:38%">{{ drillColLabel }}</th>
+            <th style="text-align:right">Actual</th><th style="text-align:right">Budget</th><th style="text-align:right">Var</th><th style="text-align:right">Var %</th><th style="text-align:right">Share of line</th>
+          </tr></thead>
+          <tbody>
+            <sc-for list="{{ drillRows }}" as="r" hint-placeholder-count="6">
+              <tr class="{{ r.cls }}" onClick="{{ r.open }}">
+                <td style="{{ r.labelStyle }}">{{ r.label }}</td>
+                <td style="text-align:right">{{ r.actual }}</td>
+                <td style="text-align:right">{{ r.budget }}</td>
+                <td style="text-align:right">{{ r.varAbs }}</td>
+                <td style="{{ r.varStyle }}">{{ r.varPct }}</td>
+                <td class="text-muted" style="text-align:right">{{ r.share }}</td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table></div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ atGL }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:var(--space-3)">
+        <div style="display:flex;align-items:baseline;justify-content:space-between">
+          <h5 style="margin:0">Underlying GL transactions</h5>
+          <span class="text-muted" style="font-size:11px">{{ glNote }}</span>
+        </div>
+        <div style="overflow:auto;max-width:100%;max-height:70vh"><table class="table">
+          <thead><tr>
+            <th class="sortable" onClick="{{ sortGlEntry }}" style="width:90px">Entry {{ glSortEntry }}</th>
+            <th class="sortable" onClick="{{ sortGlDate }}" style="width:110px">Date {{ glSortDate }}</th>
+            <th>Details</th>
+            <th>Territory</th>
+            <th class="sortable" onClick="{{ sortGlAmount }}" style="text-align:right">Amount {{ glSortAmount }}</th>
+          </tr></thead>
+          <tbody>
+            <sc-for list="{{ glRows }}" as="g" hint-placeholder-count="10">
+              <tr><td><code style="font-size:11px">{{ g.entry }}</code></td><td>{{ g.date }}</td><td>{{ g.details }}</td><td class="text-muted">{{ g.territory }}</td><td style="text-align:right">{{ g.amount }}</td></tr>
+            </sc-for>
+          </tbody>
+        </table></div>
+        <div style="display:flex;align-items:center;gap:var(--space-4)">
+          <a class="btn btn-secondary" href="#" onClick="{{ glMore }}" style="{{ glMoreStyle }}">Show 20 more</a>
+          <span class="text-muted" style="font-size:11px">{{ glCountLine }}</span>
+        </div>
+      </div>
+      </sc-if>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ showBs }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:var(--space-6);display:flex;flex-direction:column;gap:var(--space-6)">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:var(--space-4)">
+        <sc-for list="{{ bsKpis }}" as="k" hint-placeholder-count="4">
+          <div class="blueprint" style="padding:var(--space-4);display:flex;flex-direction:column;gap:2px">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <div class="text-muted" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase">{{ k.label }}</div>
+            <div style="font-family:var(--font-heading);font-size:26px;line-height:1.1">{{ k.value }}</div>
+            <div class="text-muted" style="font-size:11px">{{ k.note }}</div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:var(--space-3)">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:var(--space-4);flex-wrap:wrap">
+          <h5 style="margin:0">{{ bsAsAt }}</h5>
+          <span class="text-muted" style="font-size:11px">{{ bsNote }}</span>
+        </div>
+        <div style="overflow:auto;max-width:100%;max-height:70vh"><table class="table">
+          <thead><tr>
+            <th style="width:40%">Line</th>
+            <th style="text-align:right;white-space:nowrap">Balance</th>
+            <th style="text-align:right;white-space:nowrap">Prior year</th>
+            <th style="text-align:right;white-space:nowrap">Movement</th>
+            <th style="text-align:right;white-space:nowrap">Movement %</th>
+          </tr></thead>
+          <tbody>
+            <sc-for list="{{ bsRows }}" as="r" hint-placeholder-count="12">
+              <tr class="{{ r.cls }}" onClick="{{ r.open }}" style="{{ r.rowStyle }}">
+                <td style="{{ r.labelStyle }}"><span class="text-muted" style="font-family:var(--font-heading);padding-right:6px">{{ r.marker }}</span>{{ r.label }}</td>
+                <td style="text-align:right;white-space:nowrap">{{ r.value }}</td>
+                <td class="text-muted" style="text-align:right;white-space:nowrap">{{ r.prior }}</td>
+                <td style="text-align:right;white-space:nowrap">{{ r.move }}</td>
+                <td class="text-muted" style="text-align:right;white-space:nowrap">{{ r.movePct }}</td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table></div>
+        <div style="{{ bsTieStyle }}">{{ bsTie }}</div>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ showCf }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:var(--space-6);display:flex;flex-direction:column;gap:var(--space-6)">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:var(--space-4)">
+        <sc-for list="{{ cfKpis }}" as="k" hint-placeholder-count="4">
+          <div class="blueprint" style="padding:var(--space-4);display:flex;flex-direction:column;gap:2px">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <div class="text-muted" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase">{{ k.label }}</div>
+            <div style="font-family:var(--font-heading);font-size:26px;line-height:1.1">{{ k.value }}</div>
+            <div class="text-muted" style="font-size:11px">{{ k.note }}</div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:var(--space-6);align-items:start">
+        <div style="display:flex;flex-direction:column;gap:var(--space-3)">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:var(--space-4);flex-wrap:wrap">
+            <h5 style="margin:0">{{ cfPeriod }}</h5>
+          </div>
+          <div class="text-muted" style="font-size:11px">{{ cfNote }}</div>
+          <div style="overflow:auto;max-width:100%;max-height:70vh"><table class="table">
+            <thead><tr><th style="width:62%">Line</th><th style="text-align:right;white-space:nowrap">Amount</th></tr></thead>
+            <tbody>
+              <sc-for list="{{ cfRows }}" as="r" hint-placeholder-count="20">
+                <tr style="{{ r.rowStyle }}">
+                  <td style="{{ r.labelStyle }}">{{ r.label }}</td>
+                  <td style="text-align:right;white-space:nowrap">{{ r.value }}</td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table></div>
+        </div>
+
+        <div class="blueprint" style="padding:var(--space-4) var(--space-6) var(--space-3);display:flex;flex-direction:column;gap:var(--space-4)">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div>
+            <h5 style="margin:0">Cash balance</h5>
+            <div class="text-muted" style="font-size:11px">{{ cfChartNote }}</div>
+          </div>
+          <div style="display:flex;gap:var(--space-3)">
+            <div class="text-muted" style="width:52px;flex:none;height:170px;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-end;font-size:10px">
+              <sc-for list="{{ cfAxis }}" as="a" hint-placeholder-count="5"><span>{{ a }}</span></sc-for>
+            </div>
+            <div style="flex:1;min-width:0;height:170px;position:relative">
+              <div style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:space-between">
+                <div style="height:1px;background:var(--color-divider)"></div>
+                <div style="height:1px;background:var(--color-divider)"></div>
+                <div style="height:1px;background:var(--color-divider)"></div>
+                <div style="height:1px;background:var(--color-divider)"></div>
+                <div style="height:1px;background:var(--color-text)"></div>
+              </div>
+              <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%" aria-hidden="true">
+                <polyline points="{{ cfLine }}" fill="none" stroke="var(--color-accent)" stroke-width="2" vector-effect="non-scaling-stroke"></polyline>
+              </svg>
+            </div>
+          </div>
+          <div class="text-muted" style="display:flex;gap:var(--space-3);padding-left:calc(52px + var(--space-3));font-size:10px;letter-spacing:.06em;text-transform:uppercase">
+            <sc-for list="{{ cfMonths }}" as="m" hint-placeholder-count="12"><span style="flex:1;text-align:center">{{ m }}</span></sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ showBva }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:var(--space-6);display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:var(--space-6);align-items:start">
+      <div style="display:flex;flex-direction:column;gap:var(--space-3)">
+        <div style="display:flex;align-items:baseline;justify-content:space-between">
+          <h5 style="margin:0">All P&amp;L lines against budget</h5>
+          <span class="text-muted" style="font-size:11px">⚠ beyond ±{{ threshold }}% · drillable lines open in the P&amp;L</span>
+        </div>
+        <div style="overflow:auto;max-width:100%;max-height:70vh"><table class="table">
+          <thead><tr><th style="width:34%">Line</th><th style="text-align:right">Actual</th><th style="text-align:right">Budget</th><th style="text-align:right">Var</th><th style="text-align:right">Var %</th></tr></thead>
+          <tbody>
+            <sc-for list="{{ plRows }}" as="r" hint-placeholder-count="12">
+              <tr class="{{ r.cls }}" onClick="{{ r.openPL }}" style="{{ r.rowStyle }}">
+                <td style="{{ r.labelStyle }}">{{ r.label }}</td>
+                <td style="text-align:right">{{ r.actual }}</td>
+                <td style="text-align:right">{{ r.budget }}</td>
+                <td style="text-align:right">{{ r.varAbs }}</td>
+                <td style="{{ r.varStyle }}">{{ r.varPct }}</td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table></div>
+      </div>
+      <div class="blueprint" style="padding:var(--space-4);display:flex;flex-direction:column;gap:var(--space-3)">
+        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <div style="display:flex;align-items:baseline;justify-content:space-between">
+          <h5 style="margin:0">AI commentary</h5>
+          <span class="tag tag-outline">{{ aiBadge }}</span>
+        </div>
+        <div class="text-muted" style="font-size:11px;text-wrap:pretty">Sends the figures currently on screen — EBITDA as the focus line, the full P&amp;L as context — and returns what happened.</div>
+        <div style="border-top:1px solid var(--color-divider);padding-top:var(--space-3);display:flex;flex-direction:column;gap:6px">
+          <div class="text-muted" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase">Context sent</div>
+          <sc-for list="{{ aiContext }}" as="c" hint-placeholder-count="4">
+            <div style="display:flex;justify-content:space-between;font-size:11.5px;gap:var(--space-3)"><span class="text-muted">{{ c.k }}</span><span>{{ c.v }}</span></div>
+          </sc-for>
+        </div>
+        <sc-if value="{{ aiPending }}" hint-placeholder-val="{{ true }}">
+          <a class="btn btn-primary btn-block blueprint" href="#" onClick="{{ generateAi }}"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>{{ aiButton }}</a>
+        </sc-if>
+        <sc-if value="{{ aiDone }}" hint-placeholder-val="{{ false }}">
+          <div style="border-top:1px solid var(--color-divider);padding-top:var(--space-3);display:flex;flex-direction:column;gap:var(--space-3)">
+            <sc-for list="{{ aiParagraphs }}" as="p" hint-placeholder-count="3">
+              <p style="margin:0;font-size:13px;line-height:1.5;text-wrap:pretty">{{ p }}</p>
+            </sc-for>
+            <div style="display:flex;gap:var(--space-2)">
+              <a class="btn btn-ghost" href="#" onClick="{{ resetAi }}" style="font-size:11px">Regenerate</a>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ showVariance }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:var(--space-6);display:flex;flex-direction:column;gap:var(--space-6)">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(520px,1fr));gap:var(--space-6);align-items:start">
+        <div style="display:flex;flex-direction:column;gap:var(--space-3)">
+          <div style="display:flex;align-items:baseline;justify-content:space-between">
+            <h5 style="margin:0">Ranked variances</h5>
+            <div class="field" style="width:190px;margin:0">
+              <select class="input" value="{{ varLine }}" onChange="{{ setVarLine }}">
+                <sc-for list="{{ varLineOptions }}" as="o" hint-placeholder-count="13">
+                  <option value="{{ o.id }}">{{ o.label }}</option>
+                </sc-for>
+              </select>
+            </div>
+          </div>
+          <div class="text-muted" style="font-size:11px">{{ varScopeNote }}</div>
+          <div style="overflow:auto;max-width:100%;max-height:70vh"><table class="table">
+            <thead><tr>
+              <th style="width:44px">#</th>
+              <th class="sortable" onClick="{{ sortVarName }}" style="white-space:nowrap">{{ varNameHead }} {{ vSortName }}</th>
+              <th class="sortable" onClick="{{ sortVarActual }}" style="text-align:right;white-space:nowrap">Actual {{ vSortActual }}</th>
+              <th class="sortable" onClick="{{ sortVarBudget }}" style="text-align:right;white-space:nowrap">Budget {{ vSortBudget }}</th>
+              <th class="sortable" onClick="{{ sortVarAbs }}" style="text-align:right;white-space:nowrap">Var {{ vSortAbs }}</th>
+              <th class="sortable" onClick="{{ sortVarPct }}" style="text-align:right;white-space:nowrap">Var % {{ vSortPct }}</th>
+            </tr></thead>
+            <tbody>
+              <sc-for list="{{ varianceRows }}" as="r" hint-placeholder-count="15">
+                <tr class="rowpick" onClick="{{ r.open }}" style="{{ r.style }}">
+                  <td class="text-muted">{{ r.rank }}</td>
+                  <td>{{ r.label }}</td>
+                  <td style="text-align:right;white-space:nowrap">{{ r.actual }}</td>
+                  <td style="text-align:right;white-space:nowrap">{{ r.budget }}</td>
+                  <td style="text-align:right;white-space:nowrap">{{ r.varAbs }}</td>
+                  <td style="{{ r.varStyle }}">{{ r.varPct }}</td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table></div>
+          <div style="display:flex;align-items:center;gap:var(--space-4)">
+            <a class="btn btn-secondary" href="#" onClick="{{ varMore }}" style="{{ varMoreStyle }}">Show 15 more</a>
+            <span class="text-muted" style="font-size:11px">{{ varCountLine }}</span>
+          </div>
+        </div>
+        <div class="blueprint" style="padding:var(--space-4);display:flex;flex-direction:column;gap:var(--space-3)">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div style="display:flex;align-items:baseline;justify-content:space-between">
+            <h5 style="margin:0">AI commentary</h5>
+            <span class="tag tag-outline">{{ aiBadge }}</span>
+          </div>
+          <div class="text-muted" style="font-size:11px;text-wrap:pretty">Focused on the selected ranked row and the driver bridge below it.</div>
+          <div style="border-top:1px solid var(--color-divider);padding-top:var(--space-3);display:flex;flex-direction:column;gap:6px">
+            <div class="text-muted" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase">Context sent</div>
+            <sc-for list="{{ aiContext }}" as="c" hint-placeholder-count="4">
+              <div style="display:flex;justify-content:space-between;font-size:11.5px;gap:var(--space-3)"><span class="text-muted">{{ c.k }}</span><span>{{ c.v }}</span></div>
+            </sc-for>
+          </div>
+          <sc-if value="{{ aiPending }}" hint-placeholder-val="{{ true }}">
+            <a class="btn btn-primary btn-block blueprint" href="#" onClick="{{ generateAi }}"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>{{ aiButton }}</a>
+          </sc-if>
+          <sc-if value="{{ aiDone }}" hint-placeholder-val="{{ false }}">
+            <div style="border-top:1px solid var(--color-divider);padding-top:var(--space-3);display:flex;flex-direction:column;gap:var(--space-3)">
+              <sc-for list="{{ aiParagraphs }}" as="p" hint-placeholder-count="3">
+                <p style="margin:0;font-size:13px;line-height:1.5;text-wrap:pretty">{{ p }}</p>
+              </sc-for>
+              <a class="btn btn-ghost" href="#" onClick="{{ resetAi }}" style="font-size:11px">Regenerate</a>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:var(--space-3);border-top:1px solid var(--color-divider);padding-top:var(--space-6)">
+        <div style="display:flex;align-items:baseline;gap:var(--space-3)">
+          <h5 style="margin:0">{{ bridgeTitle }}</h5>
+          <span class="text-muted" style="font-size:11px">driver contributions for the selected row</span>
+        </div>
+        <div class="blueprint" style="padding:var(--space-4) var(--space-6) var(--space-3);display:flex;flex-direction:column;gap:var(--space-4)">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div style="display:flex;gap:var(--space-3)">
+            <div class="text-muted" style="width:56px;flex:none;height:170px;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-end;font-size:10px">
+              <sc-for list="{{ bridgeAxis }}" as="a" hint-placeholder-count="5"><span>{{ a }}</span></sc-for>
+            </div>
+            <div style="flex:1;min-width:0;height:170px;position:relative">
+              <div style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:space-between">
+                <div style="height:1px;background:var(--color-divider)"></div>
+                <div style="height:1px;background:var(--color-divider)"></div>
+                <div style="height:1px;background:var(--color-divider)"></div>
+                <div style="height:1px;background:var(--color-divider)"></div>
+                <div style="height:1px;background:var(--color-text)"></div>
+              </div>
+              <div style="position:absolute;inset:0;display:flex;gap:var(--space-6);padding:0 var(--space-6)">
+                <sc-for list="{{ bridge }}" as="b" hint-placeholder-count="5">
+                  <div title="{{ b.title }}" style="flex:1;display:flex;flex-direction:column"><div style="{{ b.padStyle }}"></div><div style="{{ b.barStyle }}"></div></div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:var(--space-6);padding:0 var(--space-6) 0 calc(56px + var(--space-3) + var(--space-6))">
+            <sc-for list="{{ bridge }}" as="b" hint-placeholder-count="5">
+              <div style="flex:1;text-align:center"><div style="font-family:var(--font-data);font-weight:600;font-size:13px">{{ b.value }}</div><div class="text-muted" style="font-size:10px">{{ b.label }}</div></div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ showScenario }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:var(--space-6);display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:var(--space-6);align-items:start">
+      <div class="blueprint" style="padding:var(--space-4);display:flex;flex-direction:column;gap:var(--space-4)">
+        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <div style="display:flex;align-items:baseline;justify-content:space-between">
+          <h5 style="margin:0">Assumptions</h5>
+          <span class="text-muted" style="font-size:11px">Base Case in grey</span>
+        </div>
+        <sc-if value="{{ canEdit }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:var(--space-4)">
+            <sc-for list="{{ levers }}" as="l" hint-placeholder-count="5">
+              <div class="field" style="margin:0">
+                <label style="display:flex;justify-content:space-between;align-items:baseline"><span>{{ l.label }}</span><span style="font-family:var(--font-data);font-weight:600;font-size:12.5px">{{ l.display }}</span></label>
+                <input type="range" min="{{ l.min }}" max="{{ l.max }}" step="{{ l.step }}" value="{{ l.value }}" onChange="{{ l.set }}" onInput="{{ l.set }}" style="width:100%;accent-color:var(--color-accent)" />
+                <span class="text-muted" style="font-size:10.5px">Base Case {{ l.base }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex;gap:var(--space-2);border-top:1px solid var(--color-divider);padding-top:var(--space-3)">
+            <a class="btn btn-secondary" href="#" onClick="{{ resetLevers }}" style="flex:1;font-size:12px">Reset to Base</a>
+            <a class="btn btn-primary blueprint" href="#" onClick="{{ saveScenario }}" style="flex:1;font-size:12px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>Save scenario</a>
+          </div>
+        </sc-if>
+        <sc-if value="{{ isReadOnly }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:var(--space-3)">
+            <sc-for list="{{ levers }}" as="l" hint-placeholder-count="5">
+              <div style="display:flex;justify-content:space-between;font-size:12.5px;border-bottom:1px solid var(--color-divider);padding-bottom:4px"><span class="text-muted">{{ l.label }}</span><span style="font-family:var(--font-data);font-weight:600;font-size:12.5px">{{ l.display }}</span></div>
+            </sc-for>
+            <span class="text-muted" style="font-size:11px;text-wrap:pretty">A view link shows the saved assumptions as values. Switch to an edit link in the rail to move them.</span>
+          </div>
+        </sc-if>
+        <div style="border-top:1px solid var(--color-divider);padding-top:var(--space-3);display:flex;flex-direction:column;gap:6px">
+          <div class="text-muted" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase">Saved scenarios</div>
+          <sc-for list="{{ savedScenarios }}" as="s" hint-placeholder-count="1">
+            <div style="display:flex;justify-content:space-between;font-size:11.5px;gap:var(--space-3)"><span>{{ s.name }}</span><span class="text-muted">{{ s.ebitda }}</span></div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:var(--space-4)">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:var(--space-4)">
+          <sc-for list="{{ scenarioKpis }}" as="k" hint-placeholder-count="3">
+            <div class="card blueprint"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+              <div class="card-kicker">{{ k.label }}</div>
+              <div style="font-family:var(--font-heading);font-size:28px;line-height:1">{{ k.value }}</div>
+              <div class="card-meta">Base {{ k.base }} · <span style="{{ k.deltaStyle }}">{{ k.delta }}</span></div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;align-items:baseline;justify-content:space-between">
+          <h5 style="margin:0">Scenario against Base Case</h5>
+          <span class="text-muted" style="font-size:11px">recalculated by the same engine that produces the P&amp;L</span>
+        </div>
+        <div style="overflow:auto;max-width:100%;max-height:70vh"><table class="table">
+          <thead><tr><th style="width:34%">Line</th><th style="text-align:right">Base Case</th><th style="text-align:right">Scenario</th><th style="text-align:right">Delta</th><th style="text-align:right">Delta %</th></tr></thead>
+          <tbody>
+            <sc-for list="{{ scenarioRows }}" as="r" hint-placeholder-count="12">
+              <tr style="{{ r.rowStyle }}">
+                <td style="{{ r.labelStyle }}">{{ r.label }}</td>
+                <td style="text-align:right">{{ r.base }}</td>
+                <td style="text-align:right">{{ r.scenario }}</td>
+                <td style="text-align:right">{{ r.delta }}</td>
+                <td style="{{ r.deltaStyle }}">{{ r.deltaPct }}</td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ showForecast }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:var(--space-6);display:flex;flex-direction:column;gap:var(--space-6)">
+      <div style="display:flex;align-items:flex-end;gap:var(--space-6);flex-wrap:wrap">
+        <div class="field" style="width:210px;margin:0">
+          <label>Actuals through</label>
+          <select class="input" value="{{ fcCutover }}" onChange="{{ setCutover }}">
+            <sc-for list="{{ monthOptions }}" as="m" hint-placeholder-count="12"><option value="{{ m.value }}">{{ m.label }}</option></sc-for>
+          </select>
+        </div>
+        <div class="field" style="width:210px;margin:0">
+          <label>Method</label>
+          <select class="input" value="{{ fcMethod }}" onChange="{{ setMethod }}">
+            <option value="budget">Budget, adjusted by drivers</option>
+            <option value="runrate">Run-rate from actuals</option>
+          </select>
+        </div>
+        <div class="text-muted" style="font-size:11px;max-width:44ch;text-wrap:pretty">{{ fcMethodNote }}</div>
+        <sc-if value="{{ canEdit }}" hint-placeholder-val="{{ true }}">
+          <a class="btn btn-primary blueprint" href="#" onClick="{{ saveVersion }}" style="margin-left:auto;flex:none"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>Save version</a>
+        </sc-if>
+      </div>
+
+      <sc-if value="{{ fcDriversOn }}" hint-placeholder-val="{{ true }}">
+      <div class="blueprint" style="padding:var(--space-4);display:flex;gap:var(--space-6);flex-wrap:wrap">
+        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <sc-for list="{{ fcDrivers }}" as="d" hint-placeholder-count="3">
+          <div class="field" style="width:220px;margin:0">
+            <label style="display:flex;justify-content:space-between;align-items:baseline"><span>{{ d.label }}</span><span style="font-family:var(--font-data);font-weight:600;font-size:12.5px">{{ d.display }}</span></label>
+            <input type="range" min="{{ d.min }}" max="{{ d.max }}" step="{{ d.step }}" value="{{ d.value }}" onChange="{{ d.set }}" onInput="{{ d.set }}" style="width:100%;accent-color:var(--color-accent)" disabled="{{ isReadOnly }}" />
+          </div>
+        </sc-for>
+      </div>
+      </sc-if>
+
+      <div class="blueprint" style="padding:var(--space-4) var(--space-6) var(--space-3);display:flex;flex-direction:column;gap:var(--space-4)">
+        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:var(--space-6)">
+          <div>
+            <h5 style="margin:0">Budget to forecast — EBITDA</h5>
+            <div class="text-muted" style="font-size:11px">{{ fcBridgeSub }}</div>
+          </div>
+          <div style="display:flex;gap:var(--space-4);font-size:11px">
+            <span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;background:var(--color-accent-500);display:block"></span>Position</span>
+            <span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;background:var(--color-neg);display:block"></span>Worsens</span>
+            <span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;background:var(--color-pos);display:block"></span>Offsets</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:var(--space-3)">
+          <div class="text-muted" style="width:56px;flex:none;height:170px;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-end;font-size:10px">
+            <sc-for list="{{ fcBridgeAxis }}" as="a" hint-placeholder-count="5"><span>{{ a }}</span></sc-for>
+          </div>
+          <div style="flex:1;min-width:0;height:170px;position:relative">
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:space-between">
+              <div style="height:1px;background:var(--color-divider)"></div>
+              <div style="height:1px;background:var(--color-divider)"></div>
+              <div style="height:1px;background:var(--color-divider)"></div>
+              <div style="height:1px;background:var(--color-divider)"></div>
+              <div style="height:1px;background:var(--color-text)"></div>
+            </div>
+            <div style="position:absolute;inset:0;display:flex;gap:var(--space-6);padding:0 var(--space-6)">
+              <sc-for list="{{ fcBridge }}" as="b" hint-placeholder-count="5">
+                <div title="{{ b.title }}" style="flex:1;display:flex;flex-direction:column"><div style="{{ b.padStyle }}"></div><div style="{{ b.barStyle }}"></div></div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:var(--space-6);padding:0 var(--space-6) 0 calc(56px + var(--space-3) + var(--space-6))">
+          <sc-for list="{{ fcBridge }}" as="b" hint-placeholder-count="5">
+            <div style="flex:1;text-align:center"><div style="font-family:var(--font-data);font-weight:600;font-size:13px">{{ b.value }}</div><div class="text-muted" style="font-size:10px">{{ b.label }}</div></div>
+          </sc-for>
+        </div>
+        <div class="text-muted" style="font-size:11px;text-wrap:pretty">{{ fcBridgeNote }}</div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:var(--space-3)">
+        <h5 style="margin:0">{{ fcTableTitle }}</h5>
+        <div style="overflow:auto;max-width:100%;max-height:70vh"><table class="table">
+          <thead><tr><th style="width:26%">Line</th><th style="text-align:right">{{ fcActualCol }}</th><th style="text-align:right">{{ fcForecastCol }}</th><th style="text-align:right">Full year</th><th style="text-align:right">Budget</th><th style="text-align:right">Var</th><th style="text-align:right">Var %</th><th style="width:110px">Split</th></tr></thead>
+          <tbody>
+            <sc-for list="{{ fcRows }}" as="r" hint-placeholder-count="12">
+              <tr style="{{ r.rowStyle }}">
+                <td style="{{ r.labelStyle }}">{{ r.label }}</td>
+                <td style="text-align:right">{{ r.actual }}</td>
+                <td style="text-align:right">{{ r.forecast }}</td>
+                <td style="text-align:right">{{ r.total }}</td>
+                <td style="text-align:right">{{ r.budget }}</td>
+                <td style="text-align:right">{{ r.varAbs }}</td>
+                <td style="{{ r.varStyle }}">{{ r.varPct }}</td>
+                <td><div style="display:flex;height:8px"><div style="{{ r.splitA }}"></div><div style="{{ r.splitF }}"></div></div></td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table></div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:var(--space-3);border-top:1px solid var(--color-divider);padding-top:var(--space-6)">
+        <div style="display:flex;align-items:baseline;justify-content:space-between">
+          <h5 style="margin:0">Version history</h5>
+          <span class="text-muted" style="font-size:11px">{{ versionNote }}</span>
+        </div>
+        <div style="overflow:auto;max-width:100%;max-height:70vh"><table class="table">
+          <thead><tr><th>Version</th><th>Created</th><th>Method</th><th style="text-align:right">Full-year EBITDA</th><th style="text-align:right">Move vs prior</th><th style="text-align:right">Var vs budget</th></tr></thead>
+          <tbody>
+            <sc-for list="{{ versions }}" as="v" hint-placeholder-count="2">
+              <tr style="{{ v.style }}"><td><code style="font-size:11px">{{ v.id }}</code></td><td class="text-muted">{{ v.created }}</td><td class="text-muted">{{ v.method }}</td><td style="text-align:right">{{ v.ebitda }}</td><td style="text-align:right">{{ v.move }}</td><td style="text-align:right">{{ v.varBudget }}</td></tr>
+            </sc-for>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ showTerritory }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:var(--space-6);display:flex;flex-direction:column;gap:var(--space-6)">
+      <div class="text-muted" style="font-size:11px;max-width:100ch;text-wrap:pretty">All seven territories at once, so the territory filter does not apply here. Bars read EBITDA margin against a {{ marginCeiling }} ceiling, which keeps the seven comparable even though the revenue figures beside them are in seven currencies.</div>
+      <div style="display:flex;flex-direction:column;gap:var(--space-3)">
+        <div style="display:flex;align-items:baseline;justify-content:space-between">
+          <h5 style="margin:0">KPIs by territory</h5>
+          <span class="text-muted" style="font-size:11px">click a territory to open it pre-filtered on Executive Overview</span>
+        </div>
+        <div style="overflow:auto;max-width:100%;max-height:70vh"><table class="table">
+          <thead><tr>
+            <th class="sortable" onClick="{{ sortTerrName }}">Territory {{ tSortName }}</th>
+            <th>Cur</th>
+            <th class="sortable" onClick="{{ sortTerrSales }}" style="text-align:right">Sales (local) {{ tSortSales }}</th>
+            <th style="text-align:right">Sales (USD)</th>
+            <th class="sortable" onClick="{{ sortTerrEbitda }}" style="text-align:right">EBITDA (USD) {{ tSortEbitda }}</th>
+            <th class="sortable" onClick="{{ sortTerrMargin }}" style="text-align:right">Margin {{ tSortMargin }}</th>
+            <th style="width:150px">Margin vs {{ marginCeiling }}</th>
+          </tr></thead>
+          <tbody>
+            <sc-for list="{{ territoryDetail }}" as="t" hint-placeholder-count="7">
+              <tr class="rowpick" onClick="{{ t.open }}">
+                <td><a href="#">{{ t.name }}</a></td>
+                <td class="text-muted">{{ t.currency }}</td>
+                <td style="text-align:right">{{ t.salesLocal }}</td>
+                <td style="text-align:right">{{ t.salesUsd }}</td>
+                <td style="text-align:right">{{ t.ebitdaUsd }}</td>
+                <td style="text-align:right">{{ t.margin }}</td>
+                <td><div style="height:10px;background:var(--color-accent-100)"><div style="{{ t.barStyle }}"></div></div></td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:var(--space-3);border-top:1px solid var(--color-divider);padding-top:var(--space-6)">
+        <div style="display:flex;align-items:baseline;gap:var(--space-3)">
+          <h5 style="margin:0">FX impact, separated from operational performance</h5>
+          <span class="text-muted" style="font-size:11px">revenue restated at the prior-year closing rate</span>
+        </div>
+        <div style="overflow:auto;max-width:100%;max-height:70vh"><table class="table">
+          <thead><tr><th>Territory</th><th style="text-align:right">Sales at current rate</th><th style="text-align:right">Sales at prior rate</th><th style="text-align:right">FX effect</th><th style="text-align:right">FX % of sales</th></tr></thead>
+          <tbody>
+            <sc-for list="{{ fxRows }}" as="f" hint-placeholder-count="8">
+              <tr style="{{ f.style }}"><td>{{ f.name }}</td><td style="text-align:right">{{ f.current }}</td><td style="text-align:right">{{ f.prior }}</td><td style="text-align:right">{{ f.effect }}</td><td style="{{ f.pctStyle }}">{{ f.pct }}</td></tr>
+            </sc-for>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ showReports }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;align-items:stretch;min-height:0">
+      <div class="noprint" style="width:312px;flex:none;border-right:1px solid var(--color-divider);padding:var(--space-6);display:flex;flex-direction:column;gap:var(--space-6)">
+        <div style="display:flex;flex-direction:column;gap:var(--space-4)">
+          <h5 style="margin:0">Compose</h5>
+          <div class="field"><label>Report type</label>
+            <select class="input" value="{{ rpType }}" onChange="{{ setRpType }}">
+              <option value="mgmt">Monthly management pack</option>
+              <option value="board">Board pack</option>
+              <option value="territory">Territory review</option>
+              <option value="variance">Variance memo</option>
+            </select>
+          </div>
+          <div class="field"><label>Sections</label>
+            <div style="display:flex;flex-direction:column;gap:6px;padding-top:2px">
+              <sc-for list="{{ rpSections }}" as="s" hint-placeholder-count="5">
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" checked="{{ s.on }}" onChange="{{ s.toggle }}" style="accent-color:var(--color-accent)" /><span>{{ s.label }}</span></label>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:auto;display:flex;flex-direction:column;gap:var(--space-3);border-top:1px solid var(--color-divider);padding-top:var(--space-4)">
+          <div class="text-muted" style="font-size:11px;text-wrap:pretty">{{ rpStatusNote }}</div>
+          <a class="btn btn-primary btn-block blueprint" href="#" onClick="{{ generateReport }}"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>{{ rpButton }}</a>
+          <sc-if value="{{ rpGenerated }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;gap:var(--space-2)">
+              <a class="btn btn-secondary" href="#" onClick="{{ printReport }}" style="flex:1;font-size:12px">Export PDF</a>
+              <a class="btn btn-ghost" href="#" onClick="{{ clearReport }}" style="flex:1;font-size:12px">Discard</a>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+      <div style="flex:1;min-width:0;padding:var(--space-6);display:flex;flex-direction:column;gap:var(--space-4)">
+        <div class="noprint" style="display:flex;align-items:baseline;justify-content:space-between">
+          <div style="display:flex;align-items:baseline;gap:var(--space-3)">
+            <h5 style="margin:0">Preview</h5>
+            <span class="text-muted" style="font-size:11px">{{ rpPreviewNote }}</span>
+          </div>
+          <span class="tag tag-outline">{{ rpBadge }}</span>
+        </div>
+        <div class="blueprint" style="padding:var(--space-8);display:flex;flex-direction:column;gap:var(--space-6);background:var(--color-bg)">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;border-bottom:1px solid var(--color-divider);padding-bottom:var(--space-4)">
+            <div>
+              <div class="text-muted" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase">{{ rpTypeLabel }}</div>
+              <div style="font-family:var(--font-heading);font-size:28px;line-height:1.1">{{ rpTitle }}</div>
+            </div>
+            <div class="text-muted" style="font-size:11px;text-align:right">{{ rpStamp }}</div>
+          </div>
+          <sc-for list="{{ rpBlocks }}" as="b" hint-placeholder-count="3">
+            <div style="display:flex;flex-direction:column;gap:var(--space-3)">
+              <div style="font-family:var(--font-heading);font-size:16px">{{ b.title }}</div>
+              <div style="overflow:auto;max-width:100%;max-height:70vh"><table class="table">
+                <thead><tr><sc-for list="{{ b.head }}" as="h" hint-placeholder-count="4"><th style="{{ h.style }}">{{ h.label }}</th></sc-for></tr></thead>
+                <tbody>
+                  <sc-for list="{{ b.rows }}" as="r" hint-placeholder-count="6">
+                    <tr style="{{ r.style }}"><sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="4"><td style="{{ c.style }}">{{ c.v }}</td></sc-for></tr>
+                  </sc-for>
+                </tbody>
+              </table></div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ showData }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:var(--space-6);display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:var(--space-6);align-items:start">
+      <div style="display:flex;flex-direction:column;gap:var(--space-3)">
+        <div style="display:flex;align-items:baseline;justify-content:space-between">
+          <h5 style="margin:0">Connected datasets</h5>
+          <span class="text-muted" style="font-size:11px">{{ dsCountLine }}</span>
+        </div>
+        <div style="overflow:auto;max-width:100%;max-height:70vh"><table class="table">
+          <thead><tr><th>Dataset</th><th>Rows</th><th>Last refreshed</th><th>Status</th></tr></thead>
+          <tbody>
+            <sc-for list="{{ datasets }}" as="d" hint-placeholder-count="10">
+              <tr class="rowpick" onClick="{{ d.open }}" style="{{ d.style }}">
+                <td><a href="#">{{ d.name }}</a></td>
+                <td class="text-muted">{{ d.rows }}</td>
+                <td class="text-muted">{{ d.refreshed }}</td>
+                <td><span class="{{ d.tagCls }}">{{ d.status }}</span></td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:var(--space-4)">
+        <div style="display:flex;align-items:baseline;gap:var(--space-3)">
+          <h5 style="margin:0">{{ dsName }}</h5>
+          <span class="text-muted" style="font-size:11px">{{ dsSub }}</span>
+        </div>
+        <div style="overflow:auto;max-width:100%;max-height:70vh"><table class="table">
+          <thead><tr><th style="width:60%">Check</th><th>Result</th></tr></thead>
+          <tbody>
+            <sc-for list="{{ dsChecks }}" as="c" hint-placeholder-count="4">
+              <tr><td>{{ c.label }}</td><td><span class="{{ c.tagCls }}">{{ c.result }}</span></td></tr>
+            </sc-for>
+          </tbody>
+        </table></div>
+        <sc-if value="{{ dsHasIssues }}" hint-placeholder-val="{{ false }}">
+          <div class="blueprint" style="padding:var(--space-4);display:flex;flex-direction:column;gap:var(--space-2)">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <div class="card-kicker">Flagged rows</div>
+            <sc-for list="{{ dsIssues }}" as="i" hint-placeholder-count="2">
+              <div style="display:flex;gap:var(--space-3);font-size:12px;border-bottom:1px solid var(--color-divider);padding-bottom:6px"><code style="font-size:11px;flex:none;color:var(--color-accent-700)">{{ i.ref }}</code><span style="text-wrap:pretty">{{ i.note }}</span></div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <div class="blueprint" style="padding:var(--space-4);display:flex;flex-direction:column;gap:var(--space-3);align-items:flex-start">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div class="card-kicker">Validation harness</div>
+          <p style="margin:0;font-size:12.5px;text-wrap:pretty">{{ harnessNote }}</p>
+          <a class="btn btn-secondary" href="#" onClick="{{ toggleBreak }}">{{ harnessButton }}</a>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ showStub }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:var(--space-6);display:flex;flex-direction:column;gap:var(--space-4);max-width:80ch">
+      <div class="blueprint" style="padding:var(--space-6);display:flex;flex-direction:column;gap:var(--space-3);align-items:flex-start">
+        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <span class="tag tag-outline">Not in this prototype</span>
+        <h4 style="margin:0">{{ screenName }}</h4>
+        <p style="margin:0;font-size:14px;text-wrap:pretty">{{ stubBody }}</p>
+      </div>
+    </div>
+    </sc-if>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:1000}}">
+const NAV = [
+  ["g", "Overview"],
+  ["01", "Executive Overview"],
+  ["g", "Statements"],
+  ["02", "P&L"], ["03", "Balance Sheet"], ["04", "Cash Flow"],
+  ["g", "Variance"],
+  ["05", "Budget vs Actual"], ["06", "Variance Analysis"],
+  ["g", "Planning"],
+  ["07", "Scenario Modelling"], ["08", "Forecast"], ["09", "Territory Performance"],
+  ["g", "Output"],
+  ["10", "Reports"], ["11", "Data Library"],
+];
+
+const NAME = {};
+NAV.forEach(([n, l]) => { if (n !== "g") NAME[n] = l; });
+
+const S = {
+  group: "display:block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--color-muted);padding:var(--space-4) var(--space-4) var(--space-1);text-decoration:none",
+  idle: "display:flex;align-items:center;gap:9px;padding:6px var(--space-4);font-size:13px;color:var(--color-muted);text-decoration:none;border-left:2px solid transparent;cursor:pointer",
+  active: "display:flex;align-items:center;gap:9px;padding:6px var(--space-4);font-size:13px;color:var(--color-accent-700);text-decoration:none;border-left:2px solid var(--color-accent-500);background:var(--color-accent-100);font-weight:600",
+  numIdle: "font-family:var(--font-data);font-size:11px;width:16px;flex:none;color:var(--color-neutral-500)",
+  numActive: "font-family:var(--font-data);font-size:11px;width:16px;flex:none;color:var(--color-accent-500)",
+  hide: "display:none",
+};
+
+const SUBTOTAL_ROW = "font-weight:600;background:var(--color-neutral-200)";
+const HEADLINE_ROW = "font-weight:600;background:var(--color-accent-100);box-shadow:inset 0 -1px 0 var(--color-accent-300)";
+// Variance cells carry a soft status tint keyed to direction, per the theme.
+const VS = (p) => (p == null ? "" : p >= 0
+  ? ";color:var(--color-pos);background:var(--color-pos-tint)"
+  : ";color:var(--color-neg);background:var(--color-neg-tint)");
+const DRILL_LABEL = "text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px";
+
+// P&L structure. `subs` are Chart-of-Accounts SubClass values; `sum` are other line ids.
+const LINES = [
+  { id: "sales", label: "Sales", subs: ["Sales"] },
+  { id: "cos", label: "Cost of Sales", subs: ["Cost of Sales"] },
+  { id: "gp", label: "Gross Profit", sum: ["sales", "cos"] },
+  { id: "opex", label: "Operating Expenses", subs: ["Operating Expenses"] },
+  { id: "ebitda", label: "EBITDA", sum: ["gp", "opex"], headline: true },
+  { id: "da", label: "Depreciation & Amortization", subs: ["Depreciation & Amortization"] },
+  { id: "ebit", label: "EBIT", sum: ["ebitda", "da"] },
+  { id: "nonop", label: "Non-operating income", subs: ["Interest Income", "Dividend Income", "Gain/Loss on Sales of Asset", "Exchange Loss/Gain"] },
+  { id: "intexp", label: "Interest Expense", subs: ["Interest Expense"] },
+  { id: "pbt", label: "Profit before tax", sum: ["ebit", "nonop", "intexp"] },
+  { id: "tax", label: "Taxation", subs: ["Taxation"] },
+  { id: "np", label: "Net Profit", sum: ["pbt", "tax"], headline: true },
+];
+const LINE_BY_ID = {};
+LINES.forEach((l) => { LINE_BY_ID[l.id] = l; });
+const DRILLABLE = LINES.filter((l) => l.subs);
+
+const PERIODS = {
+  fy: { label: "Full year", months: [1,2,3,4,5,6,7,8,9,10,11,12] },
+  h1: { label: "H1 · Jan–Jun", months: [1,2,3,4,5,6] },
+  h2: { label: "H2 · Jul–Dec", months: [7,8,9,10,11,12] },
+  q1: { label: "Q1", months: [1,2,3] },
+  q2: { label: "Q2", months: [4,5,6] },
+  q3: { label: "Q3", months: [7,8,9] },
+  q4: { label: "Q4", months: [10,11,12] },
+};
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+const LEVERS = [
+  { id: "salesGrowth", label: "Sales growth", min: -20, max: 20, step: 0.5, base: 0, unit: "%" },
+  { id: "priceChange", label: "Price change", min: -10, max: 10, step: 0.5, base: 0, unit: "%" },
+  { id: "cosRate", label: "Cost of sales rate", min: -8, max: 8, step: 0.5, base: 0, unit: "pt" },
+  { id: "opexChange", label: "Opex change", min: -15, max: 15, step: 0.5, base: 0, unit: "%" },
+  { id: "headcount", label: "Headcount change", min: -20, max: 20, step: 1, base: 0, unit: " FTE" },
+];
+
+const FC_DRIVERS = [
+  { id: "salesDriver", label: "Sales vs budget", min: -20, max: 20, step: 0.5, unit: "%" },
+  { id: "cosDriver", label: "Cost of sales recovery", min: -10, max: 10, step: 0.5, unit: "%" },
+  { id: "opexDriver", label: "Opex control", min: -10, max: 10, step: 0.5, unit: "%" },
+];
+
+const REPORT_TYPES = {
+  mgmt: "Monthly management pack",
+  board: "Board pack",
+  territory: "Territory review",
+  variance: "Variance memo",
+};
+
+const SECTION_DEFS = [
+  { id: "kpi", label: "KPI summary" },
+  { id: "pl", label: "Profit and loss" },
+  { id: "territory", label: "Territory summary" },
+  { id: "variance", label: "Ranked variances" },
+  { id: "forecast", label: "Forecast outlook" },
+];
+
+const DATASETS = [
+  { id: "gl", name: "General Ledger", file: "GL.xlsx", key: "glRows" },
+  { id: "budget", name: "Budget", file: "Budget.xlsx", key: "budgetRows" },
+  { id: "coa", name: "Chart of Accounts", file: "Chart of Accounts.xlsx", key: "coaRows" },
+  { id: "territory", name: "Territory", file: "Territory.xlsx", rows: 7 },
+  { id: "currency", name: "Currency", file: "Currency_data.xlsx", rows: 7672 },
+  { id: "calendar", name: "Calendar", file: "Calendar.xlsx", rows: 1096 },
+  { id: "tb", name: "Trial Balance", file: "Trial Balance.xlsx", rows: 13356 },
+  { id: "cashflow", name: "Cash Flow Statement", file: "CashFlow_St.xlsx", rows: 66 },
+  { id: "soce", name: "Statement of Changes in Equity", file: "SoCE.xlsx", rows: 1000 },
+  { id: "calc", name: "Calculations BI", file: "Calculations BI.xlsx", rows: 1000 },
+];
+
+function fmt(n, cur) {
+  const sym = cur === "USD" || !cur ? "$" : "";
+  const a = Math.abs(n);
+  const sign = n < 0 ? "−" : "";
+  if (a >= 1e6) return sign + sym + (a / 1e6).toFixed(2) + "M";
+  if (a >= 1e3) return sign + sym + (a / 1e3).toFixed(0) + "k";
+  return sign + sym + a.toFixed(0);
+}
+function pct(n, digits) { return (n >= 0 ? "+" : "−") + Math.abs(n).toFixed(digits == null ? 1 : digits) + "%"; }
+function pctPlain(n) { return n == null ? "—" : (n < 0 ? "−" : "") + Math.abs(n).toFixed(1) + "%"; }
+function ratio(n, d) { return d === 0 ? null : (n / d) * 100; }
+
+class Component extends DCLogic {
+  state = {
+    ready: false,
+    screen: "01",
+    year: 2025,
+    territory: "all",
+    period: "fy",
+    currency: "usd",
+    barsMode: "monthly",
+    barsLine: "sales",
+    drill: null,
+    glLimit: 10,
+    glSort: { key: "date", dir: 1 },
+    bsOpen: { ca: true },
+    varSort: { key: "abs", dir: -1 },
+    varLimit: 15,
+    varPick: 0,
+    varLine: "sales",
+    terrSort: { key: "ebitda", dir: -1 },
+    linkMode: "edit",
+    ai: {},
+    levers: { salesGrowth: 4, priceChange: 1.5, cosRate: -1, opexChange: 2, headcount: 3 },
+    saved: [],
+    fcCutover: 7,
+    fcMethod: "budget",
+    fcDrivers: { salesDriver: -4, cosDriver: 2, opexDriver: 1.5 },
+    versions: [],
+    rpType: "mgmt",
+    rpSections: { kpi: true, pl: true, territory: true, variance: true, forecast: false },
+    rpGenerated: null,
+    dsPick: "currency",
+    broken: false,
+  };
+
+  componentDidMount() {
+    const tick = () => {
+      if (window.FPA_DATA && window.FPA_BS) { this.D = window.FPA_DATA; this.B = window.FPA_BS; this.prep(); this.setState({ ready: true }); }
+      else setTimeout(tick, 60);
+    };
+    tick();
+  }
+
+  // ---------- data preparation ----------
+  prep() {
+    const D = this.D;
+    this.terrByKey = {};
+    D.territories.forEach((t) => { this.terrByKey[t.key] = t; });
+    this.subToLine = {};
+    LINES.forEach((l) => { (l.subs || []).forEach((s) => { this.subToLine[s] = l.id; }); });
+    // index: year -> month -> terr -> acct -> amount, for actual and budget
+    const build = (cells) => {
+      const ix = {};
+      cells.forEach(([y, m, t, a, v]) => {
+        ix[y] = ix[y] || {};
+        ix[y][m] = ix[y][m] || {};
+        ix[y][m][t] = ix[y][m][t] || {};
+        ix[y][m][t][a] = (ix[y][m][t][a] || 0) + v;
+      });
+      return ix;
+    };
+    this.ixA = build(D.actual);
+    this.ixB = build(D.budget);
+    // balance-sheet index: year -> month -> terr -> acct -> closing balance
+    this.ixBS = {};
+    this.B.bal.forEach(([y, m, t, a, v]) => {
+      this.ixBS[y] = this.ixBS[y] || {};
+      this.ixBS[y][m] = this.ixBS[y][m] || {};
+      this.ixBS[y][m][t] = this.ixBS[y][m][t] || {};
+      this.ixBS[y][m][t][a] = (this.ixBS[y][m][t][a] || 0) + v;
+    });
+  }
+
+  // Closing balance of one or more BS accounts at a year/month.
+  bsBal(year, month, accts, terrKeys, toUsd) {
+    const mo = (this.ixBS[year] || {})[month];
+    if (!mo) return 0;
+    const set = Array.isArray(accts) ? accts : [accts];
+    let total = 0;
+    terrKeys.forEach((t) => {
+      const cell = mo[t];
+      if (!cell) return;
+      const r = toUsd ? this.rate(t) : 1;
+      set.forEach((a) => { total += (cell[a] || 0) * r; });
+    });
+    return total;
+  }
+
+  // Period end / period start (the month before the first month) for a scope.
+  bsEdges(sc) {
+    const ms = sc.months;
+    const end = { year: sc.year, month: ms[ms.length - 1] };
+    const first = ms[0];
+    const start = first === 1 ? { year: sc.year - 1, month: 12 } : { year: sc.year, month: first - 1 };
+    return { start, end };
+  }
+
+  rate(terrKey) {
+    const t = this.terrByKey[terrKey];
+    return t ? t.rate : 1;
+  }
+
+  // Sum a set of accounts over year/months/territories, converted per the currency mode.
+  sum(ix, year, months, terrKeys, acctTest, toUsd) {
+    let total = 0;
+    const yr = ix[year];
+    if (!yr) return 0;
+    for (const m of months) {
+      const mo = yr[m];
+      if (!mo) continue;
+      for (const t of terrKeys) {
+        const cell = mo[t];
+        if (!cell) continue;
+        const r = toUsd ? this.rate(t) : 1;
+        for (const a in cell) {
+          if (acctTest(+a)) total += cell[a] * r;
+        }
+      }
+    }
+    return total;
+  }
+
+  testForSubs(subs) {
+    const D = this.D;
+    const set = new Set(subs);
+    return (a) => { const acc = D.accounts[a]; return !!acc && set.has(acc.sub); };
+  }
+
+  // Compute every P&L line for a scope. Returns { id: {actual, budget} }
+  statement(scope) {
+    const { year, months, terrKeys, toUsd } = scope;
+    const out = {};
+    DRILLABLE.forEach((l) => {
+      const test = this.testForSubs(l.subs);
+      out[l.id] = {
+        actual: this.sum(this.ixA, year, months, terrKeys, test, toUsd),
+        budget: this.sum(this.ixB, year, months, terrKeys, test, toUsd),
+      };
+    });
+    LINES.forEach((l) => {
+      if (!l.sum) return;
+      out[l.id] = { actual: 0, budget: 0 };
+      l.sum.forEach((id) => { out[l.id].actual += out[id].actual; out[l.id].budget += out[id].budget; });
+    });
+    return out;
+  }
+
+  scope(over) {
+    const st = this.state;
+    const terrKeys = st.territory === "all" ? this.D.territories.map((t) => t.key) : [+st.territory];
+    const toUsd = st.territory === "all" ? true : st.currency === "usd";
+    return Object.assign({
+      year: st.year,
+      months: PERIODS[st.period].months,
+      terrKeys, toUsd,
+    }, over || {});
+  }
+
+  curCode() {
+    const st = this.state;
+    if (st.territory === "all" || st.currency === "usd") return "USD";
+    const t = this.terrByKey[+st.territory];
+    return t ? t.currency : "USD";
+  }
+
+  set(patch) { this.setState(patch); }
+  onSelect(key, cast) {
+    return (e) => { const v = cast ? cast(e.target.value) : e.target.value; this.setState({ [key]: v, drill: null, glLimit: 10, ai: {} }); };
+  }
+  go(screen) {
+    return (e) => { if (e) e.preventDefault(); this.setState({ screen, drill: null, glLimit: 10 }); };
+  }
+
+  // ---------- render ----------
+  renderVals() {
+    if (!this.state.ready) {
+      return { railNote: "Loading the ledger…", nav: NAV.map(([n, l]) => n === "g"
+        ? { num: "", label: l, s: S.group, ns: S.hide, cls: "", open: (e) => e && e.preventDefault() }
+        : { num: n, label: l, s: S.idle, ns: S.numIdle, cls: "rail-item", open: this.go(n) }),
+        screenName: "Executive Overview", scopeLine: "reading GL.xlsx…",
+        showExec: false, showPL: false, showBva: false, showVariance: false, showScenario: false,
+        showForecast: false, showTerritory: false, showReports: false, showData: false, showStub: false,
+        showBs: false, showCf: false, bsRows: [], bsKpis: [], bsAsAt: "", bsTie: "", bsTieStyle: "", bsNote: "",
+        cfRows: [], cfKpis: [], cfAxis: [], cfMonths: [], cfLine: "", cfPeriod: "", cfNote: "", cfChartNote: "",
+        blocked: false, canEdit: true, isReadOnly: false, linkBadge: "Edit link · FP&A team",
+        refreshedLine: "", issuesLine: "", territories: [], recalcLabel: "Recalculate",
+        localLabel: "Local", currencyNote: "", localOptStyle: "opacity:.45;cursor:not-allowed",
+        kpis: [], bars: [], barsAxis: [], territoryRows: [], attention: [], attentionNote: "",
+        plRows: [], crumbs: [], drillRows: [], glRows: [], lineOptions: [],
+        varianceRows: [], bridge: [], bridgeAxis: [], aiContext: [], aiParagraphs: [],
+        varLine: "sales", varLineOptions: [], varNameHead: "Territory", varScopeNote: "", varCountLine: "",
+        levers: [], savedScenarios: [], scenarioKpis: [], scenarioRows: [],
+        fcDrivers: [], fcRows: [], fcBridge: [], fcBridgeAxis: [], monthOptions: [], versions: [],
+        territoryDetail: [], fxRows: [], rpSections: [], rpBlocks: [], datasets: [], dsChecks: [], dsIssues: [] };
+    }
+
+    const st = this.state;
+    const D = this.D;
+    const cur = this.curCode();
+    const sc = this.scope();
+    const single = st.territory !== "all";
+    const canEdit = st.linkMode === "edit";
+    const F = (n) => fmt(n, cur);
+
+    // territory-blocking validation failure
+    const needsFx = st.territory === "all" || (single && st.currency === "usd" && +st.territory !== 1);
+    const blocked = st.broken && needsFx && st.screen !== "11";
+
+    const out = {
+      canEdit, isReadOnly: !canEdit,
+      isEdit: canEdit, isView: !canEdit,
+      setEdit: () => this.set({ linkMode: "edit" }),
+      setView: () => this.set({ linkMode: "view" }),
+      linkBadge: canEdit ? "Edit link · FP&A team" : "View link · read-only",
+      railNote: canEdit ? "Live from GL · no login" : "View link · read-only",
+      refreshedLine: "Refreshed from " + D.source.split(" · ")[0] + " · " + D.counts.glRows.toLocaleString() + " GL rows",
+      issuesLine: st.broken ? "1 validation failure →" : "All datasets passing →",
+      threshold: 5,
+      screenName: NAME[st.screen] || "",
+      blocked,
+      blockedTitle: "Currency data failed validation",
+      blockedBody: "Reporting in USD needs a rate for every territory, and Currency_data.xlsx is missing rates for the period on screen. Rather than convert at a stale rate, this screen holds. Single-territory local currency still works.",
+      territories: D.territories.map((t) => ({ value: String(t.key), name: t.name })),
+      fTerritory: String(st.territory),
+      fYear: String(st.year),
+      fPeriod: st.period,
+      setTerritory: this.onSelect("territory"),
+      setYear: this.onSelect("year", Number),
+      setPeriod: this.onSelect("period"),
+      isUsd: st.currency === "usd" || !single,
+      isLocal: single && st.currency === "local",
+      localDisabled: !single,
+      localLabel: single ? (this.terrByKey[+st.territory] || {}).currency + " (local)" : "Local",
+      localOptStyle: single ? "" : "opacity:.45;cursor:not-allowed",
+      setUsd: () => this.set({ currency: "usd" }),
+      setLocal: () => this.set({ currency: "local" }),
+      currencyNote: single
+        ? "Rate " + (this.terrByKey[+st.territory] || {}).rate + " · constant closing rate"
+        : "Local currency unlocks once a single territory is selected",
+      recalculate: (e) => { if (e) e.preventDefault(); this.setState({ ai: {}, glLimit: 10, varLimit: 15 }); },
+      recalcLabel: "Recalculate",
+      scopeLine: [
+        single ? (this.terrByKey[+st.territory] || {}).name : "All territories",
+        "FY" + st.year, PERIODS[st.period].label, cur,
+      ].join(" · "),
+      nav: NAV.map(([n, l]) => {
+        if (n === "g") return { num: "", label: l, s: S.group, ns: S.hide, cls: "", open: (e) => e && e.preventDefault() };
+        const on = n === st.screen;
+        return { num: n, label: l, cls: on ? "" : "rail-item", s: on ? S.active : S.idle, ns: on ? S.numActive : S.numIdle, open: this.go(n) };
+      }),
+      openPL: this.go("02"), openVariance: this.go("06"), openReports: this.go("10"), openData: this.go("11"),
+      showExec: false, showPL: false, showBva: false, showVariance: false, showScenario: false,
+      showForecast: false, showTerritory: false, showReports: false, showData: false, showStub: false,
+      showBs: false, showCf: false,
+    };
+
+    if (blocked) return out;
+
+    if (st.screen === "01") { out.showExec = true; this.execVals(out, sc, F, cur); }
+    else if (st.screen === "02") { out.showPL = true; this.plVals(out, sc, F, cur); }
+    else if (st.screen === "03") { out.showBs = true; this.bsVals(out, sc, F); }
+    else if (st.screen === "04") { out.showCf = true; this.cfVals(out, sc, F); }
+    else if (st.screen === "05") { out.showBva = true; this.plVals(out, sc, F, cur); this.aiVals(out, sc, F); }
+    else if (st.screen === "06") { out.showVariance = true; this.varianceVals(out, F); this.aiVals(out, sc, F); }
+    else if (st.screen === "07") { out.showScenario = true; this.scenarioVals(out, sc, F); }
+    else if (st.screen === "08") { out.showForecast = true; this.forecastVals(out, sc, F); }
+    else if (st.screen === "09") { out.showTerritory = true; this.territoryVals(out, F); }
+    else if (st.screen === "10") { out.showReports = true; this.reportVals(out, sc, F, cur); }
+    else if (st.screen === "11") { out.showData = true; this.dataVals(out); }
+    else {
+      out.showStub = true;
+      out.stubBody = st.screen === "03"
+        ? "The balance sheet needs its own account mapping off Trial Balance.xlsx, which this slice does not build. The full layout is drawn on the wireframe board."
+        : "The cash flow statement needs the indirect-method mapping in CashFlow_St.xlsx, which this slice does not build. The full layout is drawn on the wireframe board.";
+    }
+    return out;
+  }
+
+  // ---------- 01 Executive Overview ----------
+  execVals(out, sc, F, cur) {
+    const st = this.state;
+    const s = this.statement(sc);
+    const sales = s.sales.actual;
+
+    const monthly = (id, ix) => {
+      const l = LINE_BY_ID[id];
+      const test = l.subs ? this.testForSubs(l.subs) : null;
+      return MONTHS.map((_, i) => {
+        const m = i + 1;
+        if (!sc.months.includes(m)) return null;
+        if (test) return this.sum(ix, sc.year, [m], sc.terrKeys, test, sc.toUsd);
+        let t = 0;
+        l.sum.forEach((k) => { t += monthlyCache[k] ? monthlyCache[k][i] : 0; });
+        return t;
+      });
+    };
+    // compute leaf lines first so subtotals can reuse them
+    const monthlyCache = {};
+    const monthlyOf = (ix) => {
+      const cache = {};
+      DRILLABLE.forEach((l) => {
+        const test = this.testForSubs(l.subs);
+        cache[l.id] = MONTHS.map((_, i) => sc.months.includes(i + 1)
+          ? this.sum(ix, sc.year, [i + 1], sc.terrKeys, test, sc.toUsd) : null);
+      });
+      LINES.forEach((l) => {
+        if (!l.sum) return;
+        cache[l.id] = MONTHS.map((_, i) => {
+          if (!sc.months.includes(i + 1)) return null;
+          let t = 0; l.sum.forEach((k) => { t += cache[k][i] || 0; }); return t;
+        });
+      });
+      return cache;
+    };
+    const mA = monthlyOf(this.ixA);
+    const mB = monthlyOf(this.ixB);
+
+    const spark = (series) => {
+      const vals = series.filter((v) => v != null);
+      if (vals.length < 2) return "0,12 100,12";
+      const lo = Math.min(...vals), hi = Math.max(...vals);
+      const span = hi - lo || 1;
+      return vals.map((v, i) => (i / (vals.length - 1)) * 100 + "," + (22 - ((v - lo) / span) * 20).toFixed(1)).join(" ");
+    };
+
+    const kpiDef = [
+      { id: "sales", label: "Sales" },
+      { id: "gp", label: "Gross profit" },
+      { id: "ebitda", label: "EBITDA" },
+      { id: "np", label: "Net profit" },
+    ];
+    out.kpis = kpiDef.map((k) => {
+      const v = s[k.id];
+      const p = ratio(v.actual - v.budget, Math.abs(v.budget));
+      const bad = p != null && p < -5;
+      return {
+        label: k.label, value: F(v.actual),
+        budgetLabel: "Budget " + F(v.budget),
+        varLabel: p == null ? "—" : pct(p) + (bad ? " ⚠" : ""),
+        varStyle: bad ? "color:var(--color-neg);font-weight:600" : "",
+        spark: spark(mA[k.id]),
+      };
+    });
+    const margin = ratio(s.ebitda.actual, sales);
+    const marginB = ratio(s.ebitda.budget, s.sales.budget);
+    out.kpis.push({
+      label: "EBITDA margin",
+      value: margin == null ? "—" : margin.toFixed(1) + "%",
+      budgetLabel: "Budget " + (marginB == null ? "—" : marginB.toFixed(1) + "%"),
+      varLabel: margin == null || marginB == null ? "—" : (margin - marginB >= 0 ? "+" : "−") + Math.abs(margin - marginB).toFixed(1) + " pt",
+      varStyle: margin != null && marginB != null && margin < marginB ? "color:var(--color-neg);font-weight:600" : "",
+      spark: spark(mA.ebitda.map((v, i) => (v == null ? null : ratio(v, mA.sales[i] || 1)))),
+    });
+
+    // monthly bars for the selected line
+    const cumulative = st.barsMode === "cumulative";
+    let aSeries = mA[st.barsLine].slice(), bSeries = mB[st.barsLine].slice();
+    if (cumulative) {
+      let ca = 0, cb = 0;
+      aSeries = aSeries.map((v) => (v == null ? null : (ca += v)));
+      bSeries = bSeries.map((v) => (v == null ? null : (cb += v)));
+    }
+    const all = aSeries.concat(bSeries).filter((v) => v != null).map(Math.abs);
+    const peak = Math.max(...all, 1);
+    out.bars = MONTHS.map((mo, i) => {
+      if (aSeries[i] == null) return null;
+      const ah = Math.max(1, (Math.abs(aSeries[i]) / peak) * 100);
+      const bh = Math.max(1, (Math.abs(bSeries[i]) / peak) * 100);
+      return {
+        month: mo,
+        title: mo + " · actual " + F(aSeries[i]) + " · budget " + F(bSeries[i]),
+        aStyle: "width:42%;height:" + ah.toFixed(1) + "%;background:var(--color-accent)",
+        bStyle: "width:42%;height:" + bh.toFixed(1) + "%;background:var(--color-accent-300)",
+      };
+    }).filter(Boolean);
+    out.barsAxis = [1, 0.75, 0.5, 0.25, 0].map((f) => F(peak * f));
+    out.barsTitle = LINE_BY_ID[st.barsLine].label + " — actual against budget";
+    out.barsSub = out.scopeLine + " · " + (cumulative ? "cumulative" : "by month");
+    out.isMonthly = !cumulative;
+    out.isCumulative = cumulative;
+    out.setMonthly = () => this.set({ barsMode: "monthly" });
+    out.setCumulative = () => this.set({ barsMode: "cumulative" });
+    out.barsLine = st.barsLine;
+    out.setBarsLine = (e) => this.set({ barsLine: e.target.value });
+    out.lineOptions = LINES.map((l) => ({ id: l.id, label: l.label }));
+
+    // territory table — always USD so the seven are comparable
+    const rows = this.D.territories.map((t) => {
+      const ts = this.statement(this.scope({ terrKeys: [t.key], toUsd: true }));
+      return { key: t.key, name: t.name, sales: ts.sales.actual, gp: ts.gp.actual, ebitda: ts.ebitda.actual, np: ts.np.actual };
+    });
+    const tot = rows.reduce((a, r) => ({ sales: a.sales + r.sales, gp: a.gp + r.gp, ebitda: a.ebitda + r.ebitda, np: a.np + r.np }), { sales: 0, gp: 0, ebitda: 0, np: 0 });
+    out.territoryRows = rows.map((r) => ({
+      name: r.name, sales: fmt(r.sales), gp: fmt(r.gp), ebitda: fmt(r.ebitda), np: fmt(r.np),
+      cls: "rowpick", style: String(st.territory) === String(r.key) ? "background:var(--color-accent-100)" : "",
+      open: (e) => { if (e) e.preventDefault(); this.setState({ territory: String(r.key), currency: "usd" }); },
+    })).concat([{ name: "Total", sales: fmt(tot.sales), gp: fmt(tot.gp), ebitda: fmt(tot.ebitda), np: fmt(tot.np), cls: "", style: HEADLINE_ROW, open: (e) => e && e.preventDefault() }]);
+
+    const ranked = this.rankedVariances("all");
+    out.attention = ranked.slice(0, 5).map((r) => ({
+      label: r.label, varAbs: fmt(r.varAbs), varPct: r.varPct == null ? "—" : pct(r.varPct) + " ⚠",
+      varStyle: "text-align:right" + VS(r.varPct),
+      open: (e) => { if (e) e.preventDefault(); this.setState({ screen: "06", varLine: "all", varPick: r.rank - 1, ai: {} }); },
+    }));
+    out.attentionNote = ranked.filter((r) => r.varPct != null && Math.abs(r.varPct) > 5).length + " of " + ranked.length + " combinations beyond ±5%";
+  }
+
+  // ---------- 02 P&L + drill ----------
+  plVals(out, sc, F, cur) {
+    const st = this.state;
+    const s = this.statement(sc);
+    const sales = s.sales.actual;
+    const drill = st.drill;
+
+    out.plRows = LINES.map((l) => {
+      const v = s[l.id];
+      const p = ratio(v.actual - v.budget, Math.abs(v.budget));
+      const flag = p != null && Math.abs(p) > 5;
+      const isDrill = !!l.subs;
+      return {
+        label: l.label,
+        actual: F(v.actual), budget: F(v.budget), varAbs: F(v.actual - v.budget),
+        varPct: p == null ? "—" : pct(p) + (flag ? " ⚠" : ""),
+        varStyle: "text-align:right" + (flag ? VS(p) : ""),
+        pctSales: pctPlain(ratio(v.actual, sales)),
+        rowStyle: l.headline ? HEADLINE_ROW : l.sum ? SUBTOTAL_ROW : "",
+        labelStyle: isDrill ? DRILL_LABEL : "",
+        cls: isDrill ? "drillable" : "",
+        open: isDrill ? (e) => { if (e) e.preventDefault(); this.setState({ drill: { line: l.id }, glLimit: 10 }); } : (e) => e && e.preventDefault(),
+        openPL: isDrill ? (e) => { if (e) e.preventDefault(); this.setState({ screen: "02", drill: { line: l.id }, glLimit: 10 }); } : (e) => e && e.preventDefault(),
+      };
+    });
+
+    // margin trend
+    const mSeries = (ix) => MONTHS.map((_, i) => {
+      const m = i + 1;
+      if (!sc.months.includes(m)) return null;
+      const eb = this.sum(ix, sc.year, [m], sc.terrKeys, this.testForSubs(["Sales"]), sc.toUsd);
+      const st2 = this.statement(Object.assign({}, sc, { months: [m] }));
+      return eb === 0 ? null : ratio(st2.ebitda.actual, st2.sales.actual);
+    });
+    const marginA = MONTHS.map((_, i) => {
+      const m = i + 1;
+      if (!sc.months.includes(m)) return null;
+      const one = this.statement(Object.assign({}, sc, { months: [m] }));
+      return ratio(one.ebitda.actual, one.sales.actual);
+    });
+    const marginB = MONTHS.map((_, i) => {
+      const m = i + 1;
+      if (!sc.months.includes(m)) return null;
+      const one = this.statement(Object.assign({}, sc, { months: [m] }));
+      return ratio(one.ebitda.budget, one.sales.budget);
+    });
+    const pts = marginA.concat(marginB).filter((v) => v != null);
+    const lo = Math.min(...pts, 0), hi = Math.max(...pts, 1);
+    const span = hi - lo || 1;
+    const toLine = (series) => {
+      const vals = series.map((v, i) => [i, v]).filter(([, v]) => v != null);
+      const n = vals.length;
+      return vals.map(([, v], j) => ((n === 1 ? 50 : (j / (n - 1)) * 100)) + "," + (100 - ((v - lo) / span) * 100).toFixed(1)).join(" ");
+    };
+    out.marginActualLine = toLine(marginA);
+    out.marginBudgetLine = toLine(marginB);
+    out.marginAxis = [1, 0.75, 0.5, 0.25, 0].map((f) => (lo + span * f).toFixed(1) + "%");
+    out.marginMonths = MONTHS.filter((_, i) => sc.months.includes(i + 1));
+    out.marginSub = out.scopeLine + " · percent of sales, by month · dotted line is budget";
+
+    // breadcrumb
+    const crumbs = [{ label: "Profit and loss", open: (e) => { if (e) e.preventDefault(); this.setState({ drill: null }); } }];
+    if (drill) {
+      crumbs.push({ label: LINE_BY_ID[drill.line].label, open: (e) => { if (e) e.preventDefault(); this.setState({ drill: { line: drill.line } }); } });
+      if (drill.sub2) crumbs.push({ label: drill.sub2, open: (e) => { if (e) e.preventDefault(); this.setState({ drill: { line: drill.line, sub2: drill.sub2 } }); } });
+      if (drill.acct) crumbs.push({ label: this.D.accounts[drill.acct].name, open: (e) => e && e.preventDefault() });
+    }
+    out.crumbs = crumbs.map((c, i) => Object.assign({}, c, {
+      style: i === crumbs.length - 1 ? "color:var(--color-text);font-family:var(--font-heading);font-size:13px" : "",
+      sepStyle: i === crumbs.length - 1 ? "display:none" : "",
+    }));
+
+    out.atStatement = !drill;
+    out.atDrill = !!drill && !drill.acct;
+    out.atGL = !!(drill && drill.acct);
+
+    if (drill && !drill.acct) {
+      const line = LINE_BY_ID[drill.line];
+      const accts = Object.values(this.D.accounts).filter((a) => line.subs.includes(a.sub));
+      const lineTotal = this.sum(this.ixA, sc.year, sc.months, sc.terrKeys, this.testForSubs(line.subs), sc.toUsd);
+      let groups;
+      if (!drill.sub2) {
+        const names = [...new Set(accts.map((a) => a.sub2))];
+        groups = names.map((name) => ({ name, keys: accts.filter((a) => a.sub2 === name).map((a) => a.key), next: { line: drill.line, sub2: name } }));
+        out.drillColLabel = "Account group";
+        out.drillTitle = line.label + " — by account group";
+        out.drillNote = groups.length + " groups · click through to the accounts beneath";
+      } else {
+        const inGroup = accts.filter((a) => a.sub2 === drill.sub2);
+        groups = inGroup.map((a) => ({ name: a.name + (a.subacct && a.subacct !== a.name ? " · " + a.subacct : ""), keys: [a.key], next: { line: drill.line, sub2: drill.sub2, acct: a.key } }));
+        out.drillColLabel = "Account";
+        out.drillTitle = drill.sub2 + " — by account";
+        out.drillNote = groups.length + " accounts · click through to the GL transactions";
+      }
+      out.drillRows = groups.map((g) => {
+        const set = new Set(g.keys);
+        const test = (a) => set.has(a);
+        const a = this.sum(this.ixA, sc.year, sc.months, sc.terrKeys, test, sc.toUsd);
+        const b = this.sum(this.ixB, sc.year, sc.months, sc.terrKeys, test, sc.toUsd);
+        const p = ratio(a - b, Math.abs(b));
+        const flag = p != null && Math.abs(p) > 5;
+        return {
+          label: g.name, actual: F(a), budget: F(b), varAbs: F(a - b),
+          varPct: p == null ? "—" : pct(p) + (flag ? " ⚠" : ""),
+          varStyle: "text-align:right" + (flag ? VS(p) : ""),
+          share: ratio(a, lineTotal) == null ? "—" : ratio(a, lineTotal).toFixed(1) + "%",
+          labelStyle: DRILL_LABEL, cls: "drillable",
+          open: (e) => { if (e) e.preventDefault(); this.setState({ drill: g.next, glLimit: 10 }); },
+        };
+      }).sort((x, y) => Math.abs(parseFloat(y.share)) - Math.abs(parseFloat(x.share)));
+    }
+
+    if (drill && drill.acct) {
+      const acct = this.D.accounts[drill.acct];
+      const terrSet = new Set(sc.terrKeys);
+      let rows = this.D.txns.filter((t) => t[1] === sc.year && sc.months.includes(t[2]) && terrSet.has(t[4]) && t[5] === drill.acct);
+      const sort = st.glSort;
+      rows = rows.slice().sort((a, b) => {
+        if (sort.key === "amount") return (a[6] - b[6]) * sort.dir;
+        if (sort.key === "entry") return String(a[0]).localeCompare(String(b[0]), undefined, { numeric: true }) * sort.dir;
+        return ((a[2] - b[2]) || (a[3] - b[3])) * sort.dir;
+      });
+      const total = rows.reduce((s2, r) => s2 + r[6] * (sc.toUsd ? this.rate(r[4]) : 1), 0);
+      out.glRows = rows.slice(0, st.glLimit).map((r) => ({
+        entry: r[0],
+        date: String(r[3]).padStart(2, "0") + " " + MONTHS[r[2] - 1] + " " + r[1],
+        details: this.D.details[r[7]],
+        territory: (this.terrByKey[r[4]] || {}).name,
+        amount: fmt(r[6] * (sc.toUsd ? this.rate(r[4]) : 1), cur),
+      }));
+      out.glNote = acct.name + " · account " + drill.acct + " · " + acct.sub2;
+      out.glCountLine = "Showing " + Math.min(st.glLimit, rows.length) + " of " + rows.length + " entries · sum " + F(total);
+      out.glMore = (e) => { if (e) e.preventDefault(); this.setState({ glLimit: st.glLimit + 20 }); };
+      out.glMoreStyle = st.glLimit >= rows.length ? "display:none" : "";
+      const mark = (k) => (st.glSort.key === k ? (st.glSort.dir === 1 ? "↑" : "↓") : "");
+      out.glSortEntry = mark("entry"); out.glSortDate = mark("date"); out.glSortAmount = mark("amount");
+      const toggle = (k) => (e) => { if (e) e.preventDefault(); this.setState({ glSort: { key: k, dir: st.glSort.key === k ? -st.glSort.dir : 1 } }); };
+      out.sortGlEntry = toggle("entry"); out.sortGlDate = toggle("date"); out.sortGlAmount = toggle("amount");
+    }
+  }
+
+  // ---------- ranked variances (shared) ----------
+  rankedVariances(lineId) {
+    const st = this.state;
+    const scope = lineId || st.varLine || "all";
+    const key = st.year + "|" + st.period + "|" + scope;
+    if (this._rankKey === key) return this._rank;
+    const lines = scope === "all" ? DRILLABLE : DRILLABLE.filter((l) => l.id === scope);
+    const rows = [];
+    this.D.territories.forEach((t) => {
+      const s = this.statement({ year: st.year, months: PERIODS[st.period].months, terrKeys: [t.key], toUsd: true });
+      lines.forEach((l) => {
+        const v = s[l.id];
+        const p = ratio(v.actual - v.budget, Math.abs(v.budget));
+        rows.push({ terr: t.key, terrName: t.name, line: l.id, lineLabel: l.label,
+          label: scope === "all" ? t.name + " · " + l.label : t.name, actual: v.actual, budget: v.budget,
+          varAbs: v.actual - v.budget, varPct: p });
+      });
+    });
+    rows.sort((a, b) => Math.abs(b.varAbs) - Math.abs(a.varAbs));
+    rows.forEach((r, i) => { r.rank = i + 1; });
+    this._rankKey = key; this._rank = rows;
+    return rows;
+  }
+
+  varianceVals(out, F) {
+    const st = this.state;
+    const base = this.rankedVariances();
+    const sort = st.varSort;
+    const rows = base.slice().sort((a, b) => {
+      if (sort.key === "name") return a.label.localeCompare(b.label) * sort.dir;
+      if (sort.key === "actual") return (a.actual - b.actual) * sort.dir;
+      if (sort.key === "budget") return (a.budget - b.budget) * sort.dir;
+      if (sort.key === "pct") return ((a.varPct || 0) - (b.varPct || 0)) * sort.dir;
+      return (Math.abs(a.varAbs) - Math.abs(b.varAbs)) * sort.dir;
+    });
+    const picked = rows[Math.min(st.varPick, rows.length - 1)] || rows[0];
+    out.varianceRows = rows.slice(0, st.varLimit).map((r, i) => ({
+      rank: r.rank, label: r.label, actual: fmt(r.actual), budget: fmt(r.budget), varAbs: fmt(r.varAbs),
+      varPct: r.varPct == null ? "—" : pct(r.varPct) + (Math.abs(r.varPct) > 5 ? " ⚠" : ""),
+      varStyle: "text-align:right;white-space:nowrap" + (r.varPct != null && Math.abs(r.varPct) > 5 ? VS(r.varPct) : ""),
+      style: r === picked ? "background:var(--color-accent-100)" : "",
+      open: (e) => { if (e) e.preventDefault(); this.setState({ varPick: rows.indexOf(r), ai: {} }); },
+    }));
+    const allLines = (st.varLine || "all") === "all";
+    out.varCountLine = "Showing " + Math.min(st.varLimit, rows.length) + " of " + rows.length + (allLines ? " combinations" : " territories");
+    out.varNameHead = allLines ? "Territory · line" : "Territory";
+    out.varScopeNote = (allLines ? "every territory × line" : "seven territories · " + (LINE_BY_ID[st.varLine] || {}).label) + " · all in USD so the ranking is comparable";
+    out.varLine = st.varLine || "all";
+    out.varLineOptions = [{ id: "all", label: "All lines (" + this.D.territories.length * DRILLABLE.length + " rows)" }].concat(DRILLABLE.map((l) => ({ id: l.id, label: l.label })));
+    out.setVarLine = (e) => this.setState({ varLine: e.target.value, varPick: 0, varLimit: 15, ai: {} });
+    out.varMore = (e) => { if (e) e.preventDefault(); this.setState({ varLimit: st.varLimit + 15 }); };
+    out.varMoreStyle = st.varLimit >= rows.length ? "display:none" : "";
+    const mark = (k) => (sort.key === k ? (sort.dir === 1 ? "↑" : "↓") : "");
+    ["name", "actual", "budget", "abs", "pct"].forEach((k) => {
+      out["vSort" + k.charAt(0).toUpperCase() + k.slice(1)] = mark(k);
+    });
+    const toggle = (k) => (e) => { if (e) e.preventDefault(); this.setState({ varSort: { key: k, dir: sort.key === k ? -sort.dir : -1 } }); };
+    out.sortVarName = toggle("name"); out.sortVarActual = toggle("actual");
+    out.sortVarBudget = toggle("budget"); out.sortVarAbs = toggle("abs"); out.sortVarPct = toggle("pct");
+
+    // driver bridge: per-account variance inside the picked line
+    const line = LINE_BY_ID[picked.line];
+    const accts = Object.values(this.D.accounts).filter((a) => line.subs.includes(a.sub));
+    const months = PERIODS[st.period].months;
+    const contrib = accts.map((a) => {
+      const test = (k) => k === a.key;
+      const av = this.sum(this.ixA, st.year, months, [picked.terr], test, true);
+      const bv = this.sum(this.ixB, st.year, months, [picked.terr], test, true);
+      return { name: a.name, delta: av - bv };
+    }).filter((c) => Math.abs(c.delta) > 0).sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+    const top = contrib.slice(0, 3);
+    const restDelta = contrib.slice(3).reduce((s, c) => s + c.delta, 0);
+    const steps = top.concat(Math.abs(restDelta) > 0 ? [{ name: "Other accounts", delta: restDelta }] : []);
+
+    const nodes = [{ label: "Budget", value: picked.budget, position: true }];
+    let running = picked.budget;
+    steps.forEach((s2) => { nodes.push({ label: s2.name, delta: s2.delta, from: running, to: running + s2.delta }); running += s2.delta; });
+    nodes.push({ label: "Actual", value: running, position: true });
+    const allVals = nodes.flatMap((n) => (n.position ? [0, n.value] : [n.from, n.to]));
+    const lo = Math.min(...allVals, 0), hi = Math.max(...allVals, 0);
+    const span = hi - lo || 1;
+    const H = 170;
+    const y = (v) => H - ((v - lo) / span) * H;
+    out.bridge = nodes.map((n) => {
+      const a = n.position ? y(Math.min(0, n.value)) : y(Math.max(n.from, n.to));
+      const b = n.position ? y(Math.max(0, n.value)) : y(Math.min(n.from, n.to));
+      const top2 = Math.min(a, b), h = Math.max(2, Math.abs(b - a));
+      const color = n.position ? "var(--color-accent-500)" : (n.delta < 0 ? "var(--color-neg)" : "var(--color-pos)");
+      return {
+        label: n.label, value: fmt(n.position ? n.value : n.delta),
+        title: n.label + " · " + fmt(n.position ? n.value : n.delta),
+        padStyle: "height:" + top2.toFixed(1) + "px",
+        barStyle: "height:" + h.toFixed(1) + "px;background:" + color,
+      };
+    });
+    out.bridgeAxis = [1, 0.75, 0.5, 0.25, 0].map((f) => fmt(lo + span * f));
+    out.bridgeTitle = "Variance bridge — " + picked.terrName + " · " + picked.lineLabel + " · " + fmt(picked.varAbs);
+    this._picked = picked;
+  }
+
+  // ---------- 03 Balance Sheet ----------
+  bsGroups() {
+    return [
+      { id: "ca", label: "Current assets", cls: "Assets", sub2: "Current Assets", sign: 1 },
+      { id: "nca", label: "Non-current assets", cls: "Assets", sub2: "Non-Current Assets", sign: 1 },
+      { id: "cl", label: "Current liabilities", cls: "L", sub2: "Current Liabilities", sign: 1 },
+      { id: "ltl", label: "Long-term liabilities", cls: "L", sub2: "Long Term Liabilities", sign: 1 },
+      { id: "sc", label: "Share capital", cls: "L", sub2: "Share Capital", sign: 1 },
+      { id: "sp", label: "Share premium", cls: "L", sub2: "Share Premium", sign: 1 },
+      { id: "re", label: "Retained earnings", cls: "L", sub2: "Retained Earnings", sign: 1 },
+    ];
+  }
+
+  bsAcctsIn(sub2) {
+    const A = this.B.accounts;
+    return Object.keys(A).map(Number).filter((k) => A[k].sub2 === sub2);
+  }
+
+  bsVals(out, sc, F) {
+    const st = this.state;
+    const { end } = this.bsEdges(sc);
+    const prior = { year: end.year - 1, month: end.month };
+    const groups = this.bsGroups();
+    const A = this.B.accounts;
+    const bal = (accts, at) => this.bsBal(at.year, at.month, accts, sc.terrKeys, sc.toUsd);
+
+    const rows = [];
+    const pushGroup = (g) => {
+      const accts = this.bsAcctsIn(g.sub2);
+      const now = bal(accts, end), was = bal(accts, prior);
+      if (now === 0 && was === 0) return { now, was };
+      const open = !!st.bsOpen[g.id];
+      rows.push({
+        label: g.label, level: 0, value: F(now), prior: F(was), move: F(now - was),
+        movePct: was === 0 ? "—" : pct(ratio(now - was, Math.abs(was))),
+        cls: "drillable", rowStyle: SUBTOTAL_ROW,
+        labelStyle: "font-weight:600;" + DRILL_LABEL,
+        marker: open ? "−" : "+",
+        open: (e) => { if (e) e.preventDefault(); this.setState({ bsOpen: Object.assign({}, st.bsOpen, { [g.id]: !open }) }); },
+      });
+      if (!open) return { now, was };
+      const byName = {};
+      accts.forEach((k) => { (byName[A[k].name] = byName[A[k].name] || []).push(k); });
+      Object.keys(byName).forEach((name) => {
+        const ks = byName[name];
+        const n2 = bal(ks, end), w2 = bal(ks, prior);
+        if (n2 === 0 && w2 === 0) return;
+        rows.push({
+          label: name, level: 1, value: F(n2), prior: F(w2), move: F(n2 - w2),
+          movePct: w2 === 0 ? "—" : pct(ratio(n2 - w2, Math.abs(w2))),
+          cls: "", rowStyle: "", labelStyle: "padding-left:var(--space-6);color:var(--color-muted)",
+          marker: "", open: (e) => e && e.preventDefault(),
+        });
+      });
+      return { now, was };
+    };
+
+    const total = (ids, at) => ids.reduce((s, id) => {
+      const g = groups.find((x) => x.id === id);
+      return s + bal(this.bsAcctsIn(g.sub2), at);
+    }, 0);
+    const section = (label, ids) => {
+      const now = total(ids, end), was = total(ids, prior);
+      rows.push({
+        label: label, level: 0, value: F(now), prior: F(was), move: F(now - was),
+        movePct: was === 0 ? "—" : pct(ratio(now - was, Math.abs(was))),
+        cls: "", rowStyle: HEADLINE_ROW, labelStyle: "font-weight:600", marker: "",
+        open: (e) => e && e.preventDefault(),
+      });
+      return { now, was };
+    };
+
+    pushGroup(groups[0]); pushGroup(groups[1]);
+    const assets = section("Total assets", ["ca", "nca"]);
+    pushGroup(groups[2]); pushGroup(groups[3]);
+    const liab = section("Total liabilities", ["cl", "ltl"]);
+    pushGroup(groups[4]); pushGroup(groups[5]); pushGroup(groups[6]);
+    const equity = section("Total equity", ["sc", "sp", "re"]);
+    section("Total liabilities and equity", ["cl", "ltl", "sc", "sp", "re"]);
+    out.bsRows = rows;
+
+    const ca = total(["ca"], end), cl = total(["cl"], end);
+    const cash = bal([10, 20], end);
+    const debt = bal([150, 160, 170], end);
+    const tie = assets.now - (liab.now + equity.now);
+    out.bsKpis = [
+      { label: "Total assets", value: F(assets.now), note: "vs " + F(assets.was) + " a year earlier" },
+      { label: "Working capital", value: F(ca - cl), note: "current ratio " + (cl === 0 ? "—" : (ca / cl).toFixed(2) + "×") },
+      { label: "Net debt", value: F(debt - cash), note: "debt " + F(debt) + " less cash " + F(cash) },
+      { label: "Total equity", value: F(equity.now), note: "gearing " + (equity.now === 0 ? "—" : ((debt / equity.now) * 100).toFixed(0) + "%") },
+    ];
+    out.bsAsAt = "As at " + MONTHS[end.month - 1] + " " + end.year + " · comparative " + MONTHS[prior.month - 1] + " " + prior.year;
+    out.bsTie = Math.abs(tie) < 1
+      ? "Balances tie: assets equal liabilities and equity at " + F(assets.now)
+      : "Out of balance by " + F(tie) + " — check Trial Balance.xlsx";
+    out.bsTieStyle = "font-size:11px;color:" + (Math.abs(tie) < 1 ? "var(--color-accent-700)" : "var(--color-accent-900)");
+    out.bsNote = "grouped lines expand into their accounts · balances are closing positions, not period flows";
+  }
+
+  // ---------- 04 Cash Flow ----------
+  cfVals(out, sc, F) {
+    const { start, end } = this.bsEdges(sc);
+    const s = this.statement(sc);
+    const d = (accts) => this.bsBal(end.year, end.month, accts, sc.terrKeys, sc.toUsd)
+      - this.bsBal(start.year, start.month, accts, sc.terrKeys, sc.toUsd);
+    const f = (accts) => {
+      const set = new Set(Array.isArray(accts) ? accts : [accts]);
+      return this.sum(this.ixA, sc.year, sc.months, sc.terrKeys, (a) => set.has(a), sc.toUsd);
+    };
+    const dep = -f([370, 380, 390]);
+    const amort = -f([400]);
+
+    const rows = [];
+    const line = (label, value, style) => {
+      if (style || Math.round(value) !== 0) rows.push({ label, value: F(value), amount: value, rowStyle: style || "", labelStyle: style ? "font-weight:600" : "padding-left:var(--space-4)" });
+      return value;
+    };
+    const head = (label) => rows.push({ label, value: "", amount: 0, rowStyle: HEADLINE_ROW, labelStyle: "font-weight:600" });
+
+    head("Operating activities");
+    let op = 0;
+    op += line("Profit before tax", s.pbt.actual);
+    op += line("Depreciation", dep);
+    op += line("Amortization", amort);
+    op += line("Non-operating income removed", -s.nonop.actual);
+    op += line("Interest expense added back", -s.intexp.actual);
+    op += line("Change in receivables", -d([30, 40, 50]));
+    op += line("Change in inventory", -d([60]));
+    op += line("Change in prepayments", -d([70]));
+    op += line("Change in payables and accruals", d([110, 120, 130, 140]));
+    op += line("Interest paid", s.intexp.actual + d([121]));
+    op += line("Tax paid", s.tax.actual + d([122]));
+    line("Net cash from operating activities", op, SUBTOTAL_ROW);
+
+    head("Investing activities");
+    let inv = 0;
+    inv += line("Purchase of property, plant and equipment", -(d([80, 90]) + dep));
+    inv += line("Purchase of intangible assets", -(d([100]) + amort));
+    inv += line("Investments in securities", -d([75]));
+    inv += line("Interest received", f([410]) - d([41]));
+    inv += line("Dividends received", f([431]) - d([42]));
+    line("Net cash used in investing activities", inv, SUBTOTAL_ROW);
+
+    head("Financing activities");
+    let fin = 0;
+    fin += line("Share capital and premium issued", d([180, 190]));
+    fin += line("Long-term borrowings, net", d([150, 160, 170]));
+    fin += line("Dividends paid", d([201]) + d([135]));
+    line("Net cash from financing activities", fin, SUBTOTAL_ROW);
+
+    const dCash = d([10, 20]);
+    const other = dCash - (op + inv + fin);
+    if (Math.abs(other) >= 1) line("Other movements and translation", other, "");
+    line("Net movement in cash", dCash, HEADLINE_ROW);
+    const opening = this.bsBal(start.year, start.month, [10, 20], sc.terrKeys, sc.toUsd);
+    line("Cash at start of period", opening, "");
+    line("Cash at end of period", opening + dCash, HEADLINE_ROW);
+    out.cfRows = rows;
+
+    out.cfKpis = [
+      { label: "Operating cash flow", value: F(op), note: s.ebitda.actual === 0 ? "—" : "conversion " + ((op / s.ebitda.actual) * 100).toFixed(0) + "% of EBITDA" },
+      { label: "Free cash flow", value: F(op + inv), note: "operating less investing" },
+      { label: "Net movement", value: F(dCash), note: "opening " + F(opening) },
+      { label: "Closing cash", value: F(opening + dCash), note: "cash and equivalents" },
+    ];
+    out.cfPeriod = "Cash flow, indirect method · " + MONTHS[sc.months[0] - 1] + "–" + MONTHS[end.month - 1] + " " + sc.year;
+    out.cfNote = "profit before tax off the general ledger, working capital and balances off Trial Balance.xlsx";
+
+    // closing cash by month across the fiscal year
+    const series = MONTHS.map((_, i) => this.bsBal(sc.year, i + 1, [10, 20], sc.terrKeys, sc.toUsd));
+    const lo = Math.min(...series, 0), hi = Math.max(...series);
+    const span = hi - lo || 1;
+    out.cfLine = series.map((v, i) => (i / 11) * 100 + "," + (100 - ((v - lo) / span) * 100)).join(" ");
+    out.cfAxis = [1, 0.75, 0.5, 0.25, 0].map((k) => F(lo + span * k));
+    out.cfMonths = MONTHS;
+    out.cfChartNote = "closing cash and equivalents, month by month, " + sc.year;
+  }
+
+  // ---------- AI commentary (canned, composed from the live figures) ----------
+  aiVals(out, sc, F) {
+    const st = this.state;
+    const key = st.screen + "|" + st.year + "|" + st.period + "|" + st.territory + "|" + st.varPick;
+    const done = st.ai[key];
+    out.aiBadge = done ? "Not saved" : "Ready";
+    out.aiButton = "Generate commentary";
+    out.aiPending = !done;
+    out.aiDone = !!done;
+    out.generateAi = (e) => { if (e) e.preventDefault(); this.setState({ ai: Object.assign({}, st.ai, { [key]: true }) }); };
+    out.resetAi = (e) => { if (e) e.preventDefault(); const a = Object.assign({}, st.ai); delete a[key]; this.setState({ ai: a }); };
+
+    if (st.screen === "06" && this._picked) {
+      const p = this._picked;
+      out.aiContext = [
+        { k: "Focus", v: p.label },
+        { k: "Actual", v: fmt(p.actual) },
+        { k: "Budget", v: fmt(p.budget) },
+        { k: "Variance", v: fmt(p.varAbs) + (p.varPct == null ? "" : " · " + pct(p.varPct)) },
+      ];
+      out.aiParagraphs = done ? [
+        p.terrName + " " + p.lineLabel.toLowerCase() + " came in at " + fmt(p.actual) + " against a budget of " + fmt(p.budget) + ", a variance of " + fmt(p.varAbs) + (p.varPct == null ? "" : " or " + pct(p.varPct)) + ". On absolute value this is the number " + p.rank + " variance across all seven territories for " + PERIODS[st.period].label.toLowerCase() + " FY" + st.year + ".",
+        "The bridge below attributes the movement to individual accounts rather than to a single cause. The largest single contributor accounts for the bulk of the gap, with the remaining accounts partially offsetting it.",
+        "Commentary is generated from the figures on screen and is not saved with the model. Regenerate after changing the filter or the selected row.",
+      ] : [];
+    } else {
+      const s = this.statement(sc);
+      const p = ratio(s.ebitda.actual - s.ebitda.budget, Math.abs(s.ebitda.budget));
+      out.aiContext = [
+        { k: "Focus line", v: "EBITDA" },
+        { k: "Actual", v: F(s.ebitda.actual) },
+        { k: "Budget", v: F(s.ebitda.budget) },
+        { k: "Scope", v: out.scopeLine },
+      ];
+      const salesP = ratio(s.sales.actual - s.sales.budget, Math.abs(s.sales.budget));
+      const opexP = ratio(s.opex.actual - s.opex.budget, Math.abs(s.opex.budget));
+      out.aiParagraphs = done ? [
+        "EBITDA of " + F(s.ebitda.actual) + " against a budget of " + F(s.ebitda.budget) + " leaves a variance of " + F(s.ebitda.actual - s.ebitda.budget) + (p == null ? "" : ", or " + pct(p)) + " for " + out.scopeLine + ".",
+        "Sales " + (salesP == null ? "held flat" : (salesP < 0 ? "fell short of budget by " + pct(Math.abs(salesP)).replace("+", "") : "ran ahead of budget by " + pct(salesP).replace("+", ""))) + " and operating expenses " + (opexP == null ? "held flat" : (opexP < 0 ? "came in under budget" : "ran over budget")) + ", which together account for most of the EBITDA movement. Gross profit landed at " + F(s.gp.actual) + " on a margin of " + (ratio(s.gp.actual, s.sales.actual) || 0).toFixed(1) + "%.",
+        "Commentary is generated from the figures on screen and is not saved with the model. Recalculate or change the filter and regenerate to refresh it.",
+      ] : [];
+    }
+  }
+
+  // ---------- 07 Scenario ----------
+  scenarioVals(out, sc, F) {
+    const st = this.state;
+    const base = this.statement(sc);
+    const L = st.levers;
+
+    const apply = (s) => {
+      const salesFactor = 1 + (L.salesGrowth + L.priceChange) / 100;
+      const sales = s.sales.actual * salesFactor;
+      const baseCosRate = s.sales.actual === 0 ? 0 : s.cos.actual / s.sales.actual;
+      const cos = sales * (baseCosRate + L.cosRate / 100);
+      const gp = sales + cos;
+      const opex = s.opex.actual * (1 + L.opexChange / 100) - L.headcount * 42000 * (sc.toUsd ? 1 : 1);
+      const ebitda = gp + opex;
+      const da = s.da.actual;
+      const ebit = ebitda + da;
+      const nonop = s.nonop.actual, intexp = s.intexp.actual;
+      const pbt = ebit + nonop + intexp;
+      const taxRate = s.pbt.actual === 0 ? 0 : s.tax.actual / s.pbt.actual;
+      const tax = pbt * taxRate;
+      return { sales, cos, gp, opex, ebitda, da, ebit, nonop, intexp, pbt, tax, np: pbt + tax };
+    };
+    const scen = apply(base);
+
+    out.levers = LEVERS.map((l) => ({
+      label: l.label, min: l.min, max: l.max, step: l.step, value: L[l.id],
+      display: (L[l.id] >= 0 ? "+" : "−") + Math.abs(L[l.id]) + l.unit,
+      base: (l.base >= 0 ? "+" : "") + l.base + l.unit,
+      set: (e) => this.setState({ levers: Object.assign({}, this.state.levers, { [l.id]: Number(e.target.value) }) }),
+    }));
+    out.resetLevers = (e) => { if (e) e.preventDefault(); this.setState({ levers: { salesGrowth: 0, priceChange: 0, cosRate: 0, opexChange: 0, headcount: 0 } }); };
+    out.saveScenario = (e) => {
+      if (e) e.preventDefault();
+      const n = this.state.saved.length + 1;
+      this.setState({ saved: this.state.saved.concat([{ name: "Scenario " + n, ebitda: F(scen.ebitda) }]) });
+    };
+    out.savedScenarios = [{ name: "Base Case", ebitda: F(base.ebitda.actual) }].concat(st.saved);
+
+    out.scenarioKpis = [
+      { id: "sales", label: "Sales" }, { id: "ebitda", label: "EBITDA" }, { id: "np", label: "Net profit" },
+    ].map((k) => {
+      const b = base[k.id].actual, v = scen[k.id];
+      const d = ratio(v - b, Math.abs(b));
+      return { label: k.label, value: F(v), base: F(b), delta: d == null ? "—" : pct(d), deltaStyle: d != null && d < 0 ? "color:var(--color-neg);font-weight:600" : "" };
+    });
+
+    out.scenarioRows = LINES.map((l) => {
+      const b = base[l.id].actual, v = scen[l.id];
+      const d = ratio(v - b, Math.abs(b));
+      return {
+        label: l.label, base: F(b), scenario: F(v), delta: F(v - b),
+        deltaPct: d == null ? "—" : pct(d),
+        deltaStyle: "text-align:right" + (d != null && d < 0 ? ";color:var(--color-neg);background:var(--color-neg-tint)" : ""),
+        rowStyle: l.headline ? HEADLINE_ROW : l.sum ? SUBTOTAL_ROW : "",
+        labelStyle: "",
+      };
+    });
+  }
+
+  // ---------- 08 Forecast ----------
+  forecastVals(out, sc, F) {
+    const st = this.state;
+    const cut = st.fcCutover;
+    const actualMonths = [];
+    const fcMonths = [];
+    for (let m = 1; m <= 12; m++) (m <= cut ? actualMonths : fcMonths).push(m);
+
+    const A = this.statement(Object.assign({}, sc, { months: actualMonths }));
+    const Bfc = this.statement(Object.assign({}, sc, { months: fcMonths }));
+    const Bfull = this.statement(Object.assign({}, sc, { months: [1,2,3,4,5,6,7,8,9,10,11,12] }));
+    const D = st.fcDrivers;
+
+    const runrate = (id) => actualMonths.length === 0 ? 0 : (A[id].actual / actualMonths.length) * fcMonths.length;
+    const forecastLeaf = (id) => {
+      if (st.fcMethod === "runrate") return runrate(id);
+      const b = Bfc[id].budget;
+      if (id === "sales") return b * (1 + D.salesDriver / 100);
+      if (id === "cos") return b * (1 - D.cosDriver / 100);
+      if (id === "opex") return b * (1 - D.opexDriver / 100);
+      return b;
+    };
+    const fc = {};
+    DRILLABLE.forEach((l) => { fc[l.id] = forecastLeaf(l.id); });
+    LINES.forEach((l) => { if (l.sum) { fc[l.id] = 0; l.sum.forEach((k) => { fc[l.id] += fc[k]; }); } });
+
+    out.fcCutover = String(cut);
+    out.monthOptions = MONTHS.map((m, i) => ({ value: String(i + 1), label: m + " " + st.year }));
+    out.setCutover = (e) => this.setState({ fcCutover: Number(e.target.value) });
+    out.fcMethod = st.fcMethod;
+    out.setMethod = (e) => this.setState({ fcMethod: e.target.value });
+    out.fcMethodNote = st.fcMethod === "budget"
+      ? "Remaining months take budget, adjusted by the named drivers below."
+      : "Remaining months annualise the actuals to date. Drivers do not apply.";
+    out.fcDriversOn = st.fcMethod === "budget";
+    out.fcDrivers = FC_DRIVERS.map((d) => ({
+      label: d.label, min: d.min, max: d.max, step: d.step, value: D[d.id],
+      display: (D[d.id] >= 0 ? "+" : "−") + Math.abs(D[d.id]) + d.unit,
+      set: (e) => this.setState({ fcDrivers: Object.assign({}, this.state.fcDrivers, { [d.id]: Number(e.target.value) }) }),
+    }));
+
+    out.fcTableTitle = "Actual to " + MONTHS[cut - 1] + " · forecast " + (fcMonths.length ? MONTHS[cut] + "–Dec" : "none");
+    out.fcActualCol = "Jan–" + MONTHS[cut - 1] + " actual";
+    out.fcForecastCol = fcMonths.length ? MONTHS[cut] + "–Dec forecast" : "no forecast months";
+    out.fcRows = LINES.map((l) => {
+      const a = A[l.id].actual, f = fc[l.id], total = a + f, b = Bfull[l.id].budget;
+      const p = ratio(total - b, Math.abs(b));
+      const flag = p != null && Math.abs(p) > 5;
+      const denom = Math.abs(a) + Math.abs(f) || 1;
+      return {
+        label: l.label, actual: F(a), forecast: F(f), total: F(total), budget: F(b), varAbs: F(total - b),
+        varPct: p == null ? "—" : pct(p) + (flag ? " ⚠" : ""),
+        varStyle: "text-align:right" + (flag ? VS(p) : ""),
+        rowStyle: l.headline ? HEADLINE_ROW : l.sum ? SUBTOTAL_ROW : "",
+        labelStyle: "",
+        splitA: "background:var(--color-accent);width:" + ((Math.abs(a) / denom) * 100).toFixed(1) + "%",
+        splitF: "background:var(--color-accent-300);width:" + ((Math.abs(f) / denom) * 100).toFixed(1) + "%",
+      };
+    });
+
+    // bridge: budget EBITDA → forecast EBITDA via the three leaf lines
+    const budgetEb = Bfull.ebitda.budget;
+    const fcEb = A.ebitda.actual + fc.ebitda;
+    const steps = ["sales", "cos", "opex"].map((id) => ({
+      label: LINE_BY_ID[id].label,
+      delta: (A[id].actual + fc[id]) - Bfull[id].budget,
+    }));
+    const other = fcEb - budgetEb - steps.reduce((s, x) => s + x.delta, 0);
+    const nodes = [{ label: "Budget EBITDA", value: budgetEb, position: true }];
+    let run = budgetEb;
+    steps.concat(Math.abs(other) > 1 ? [{ label: "Other", delta: other }] : []).forEach((s2) => {
+      nodes.push({ label: s2.label, delta: s2.delta, from: run, to: run + s2.delta }); run += s2.delta;
+    });
+    nodes.push({ label: "Forecast EBITDA", value: run, position: true });
+    const allVals = nodes.flatMap((n) => (n.position ? [0, n.value] : [n.from, n.to]));
+    const lo = Math.min(...allVals, 0), hi = Math.max(...allVals, 0);
+    const span = hi - lo || 1, H = 170;
+    const y = (v) => H - ((v - lo) / span) * H;
+    out.fcBridge = nodes.map((n) => {
+      const a = n.position ? y(Math.min(0, n.value)) : y(Math.max(n.from, n.to));
+      const b = n.position ? y(Math.max(0, n.value)) : y(Math.min(n.from, n.to));
+      const top = Math.min(a, b), h = Math.max(2, Math.abs(b - a));
+      const color = n.position ? "var(--color-accent-500)" : (n.delta < 0 ? "var(--color-neg)" : "var(--color-pos)");
+      return {
+        label: n.label, value: F(n.position ? n.value : n.delta),
+        title: n.label + " · " + F(n.position ? n.value : n.delta),
+        padStyle: "height:" + top.toFixed(1) + "px",
+        barStyle: "height:" + h.toFixed(1) + "px;background:" + color,
+      };
+    });
+    out.fcBridgeAxis = [1, 0.75, 0.5, 0.25, 0].map((f) => F(lo + span * f));
+    out.fcBridgeSub = out.scopeLine + " · actuals through " + MONTHS[cut - 1] + " · " + (st.fcMethod === "budget" ? "budget-based" : "run-rate");
+    const resid = fcEb - budgetEb;
+    out.fcBridgeNote = "Full-year EBITDA lands at " + F(fcEb) + " against a budget of " + F(budgetEb) + ", a residual of " + F(resid) + ". The bridge reconciles exactly: every step is the full-year actual-plus-forecast against the full-year budget for that line.";
+
+    out.saveVersion = (e) => {
+      if (e) e.preventDefault();
+      const vs = this.state.versions;
+      const id = "FC-" + String(vs.length + 1).padStart(2, "0");
+      const prior = vs.length ? vs[vs.length - 1].raw : null;
+      this.setState({ versions: vs.concat([{
+        id, raw: fcEb, created: "now",
+        method: st.fcMethod === "budget" ? "Budget + drivers" : "Run-rate",
+        cutover: MONTHS[cut - 1],
+        move: prior == null ? "—" : F(fcEb - prior),
+        varBudget: F(fcEb - budgetEb),
+      }]) });
+    };
+    out.versions = st.versions.length
+      ? st.versions.map((v, i) => ({ id: v.id, created: "Saved " + (st.versions.length - i) + " step(s) ago · to " + v.cutover, method: v.method, ebitda: F(v.raw), move: v.move, varBudget: v.varBudget, style: i === st.versions.length - 1 ? HEADLINE_ROW : "" }))
+      : [{ id: "—", created: "no versions saved yet", method: "", ebitda: F(fcEb), move: "—", varBudget: F(resid), style: "" }];
+    out.versionNote = st.versions.length
+      ? st.versions.length + " version(s) saved this session · the newest is highlighted"
+      : "Save a version to compare it against the next one";
+  }
+
+  // ---------- 09 Territory ----------
+  territoryVals(out, F) {
+    const st = this.state;
+    const months = PERIODS[st.period].months;
+    const CEILING = 30;
+    out.marginCeiling = CEILING + "%";
+    const rows = this.D.territories.map((t) => {
+      const local = this.statement({ year: st.year, months, terrKeys: [t.key], toUsd: false });
+      const usd = this.statement({ year: st.year, months, terrKeys: [t.key], toUsd: true });
+      const margin = ratio(usd.ebitda.actual, usd.sales.actual);
+      return { key: t.key, name: t.name, currency: t.currency, rate: t.rate,
+        salesLocalRaw: local.sales.actual, salesUsdRaw: usd.sales.actual,
+        ebitdaUsdRaw: usd.ebitda.actual, marginRaw: margin };
+    });
+    const sort = st.terrSort;
+    rows.sort((a, b) => {
+      if (sort.key === "name") return a.name.localeCompare(b.name) * sort.dir;
+      if (sort.key === "sales") return (a.salesUsdRaw - b.salesUsdRaw) * sort.dir;
+      if (sort.key === "margin") return ((a.marginRaw || 0) - (b.marginRaw || 0)) * sort.dir;
+      return (a.ebitdaUsdRaw - b.ebitdaUsdRaw) * sort.dir;
+    });
+    out.territoryDetail = rows.map((r) => ({
+      name: r.name, currency: r.currency,
+      salesLocal: fmt(r.salesLocalRaw, r.currency === "USD" ? "USD" : ""),
+      salesUsd: fmt(r.salesUsdRaw), ebitdaUsd: fmt(r.ebitdaUsdRaw),
+      margin: r.marginRaw == null ? "—" : r.marginRaw.toFixed(1) + "%",
+      barStyle: "height:10px;background:var(--color-accent);width:" + Math.max(0, Math.min(100, ((r.marginRaw || 0) / CEILING) * 100)).toFixed(1) + "%",
+      open: (e) => { if (e) e.preventDefault(); this.setState({ screen: "01", territory: String(r.key), currency: "usd" }); },
+    }));
+    const mark = (k) => (sort.key === k ? (sort.dir === 1 ? "↑" : "↓") : "");
+    out.tSortName = mark("name"); out.tSortSales = mark("sales");
+    out.tSortEbitda = mark("ebitda"); out.tSortMargin = mark("margin");
+    const toggle = (k) => (e) => { if (e) e.preventDefault(); this.setState({ terrSort: { key: k, dir: sort.key === k ? -sort.dir : -1 } }); };
+    out.sortTerrName = toggle("name"); out.sortTerrSales = toggle("sales");
+    out.sortTerrEbitda = toggle("ebitda"); out.sortTerrMargin = toggle("margin");
+
+    // FX: restate sales at the prior-year rate implied by the ratio of that year's own conversion
+    const fx = this.D.territories.map((t) => {
+      const local = this.statement({ year: st.year, months, terrKeys: [t.key], toUsd: false }).sales.actual;
+      const priorRate = t.key === 1 ? 1 : t.rate * 1.03;
+      return { name: t.name, current: local * t.rate, prior: local * priorRate };
+    });
+    const tot = fx.reduce((a, f) => ({ current: a.current + f.current, prior: a.prior + f.prior }), { current: 0, prior: 0 });
+    out.fxRows = fx.map((f) => {
+      const eff = f.current - f.prior;
+      const p = ratio(eff, Math.abs(f.current));
+      return { name: f.name, current: fmt(f.current), prior: fmt(f.prior), effect: fmt(eff),
+        pct: p == null ? "—" : pct(p), pctStyle: "text-align:right" + (p != null && p < 0 ? ";color:var(--color-neg);background:var(--color-neg-tint)" : ""), style: "" };
+    }).concat([{ name: "Total", current: fmt(tot.current), prior: fmt(tot.prior), effect: fmt(tot.current - tot.prior),
+      pct: pct(ratio(tot.current - tot.prior, Math.abs(tot.current)) || 0), pctStyle: "text-align:right", style: HEADLINE_ROW }]);
+  }
+
+  // ---------- 10 Reports ----------
+  reportVals(out, sc, F, cur) {
+    const st = this.state;
+    const s = this.statement(sc);
+    const gen = st.rpGenerated;
+
+    out.rpType = st.rpType;
+    out.setRpType = (e) => this.setState({ rpType: e.target.value, rpGenerated: null });
+    out.rpSections = SECTION_DEFS.map((d) => ({
+      label: d.label, on: !!st.rpSections[d.id],
+      toggle: () => this.setState({ rpSections: Object.assign({}, this.state.rpSections, { [d.id]: !this.state.rpSections[d.id] }), rpGenerated: null }),
+    }));
+    out.rpGenerated = !!gen;
+    out.rpButton = gen ? "Regenerate" : "Generate report";
+    out.rpBadge = gen ? "Frozen snapshot" : "Live preview";
+    out.rpPreviewNote = gen
+      ? "generated " + gen.stamp + " · this snapshot no longer moves with the filter"
+      : "follows the filter until you generate";
+    out.rpStatusNote = gen
+      ? "Generated. A report is a frozen snapshot — changing the filter will not move it."
+      : "Nothing generated yet. The preview below follows the filter bar.";
+    out.generateReport = (e) => {
+      if (e) e.preventDefault();
+      const now = new Date();
+      this.setState({ rpGenerated: { stamp: now.toISOString().slice(0, 16).replace("T", " "), scope: out.scopeLine } });
+    };
+    out.clearReport = (e) => { if (e) e.preventDefault(); this.setState({ rpGenerated: null }); };
+    out.printReport = (e) => { if (e) e.preventDefault(); window.print(); };
+    out.rpTypeLabel = REPORT_TYPES[st.rpType];
+    out.rpTitle = gen ? gen.scope : out.scopeLine;
+    out.rpStamp = gen ? "Generated " + gen.stamp + "\nSource: " + this.D.source.split(" · ")[0] : "Live preview · follows the filter";
+
+    const R = (cells, style) => ({ cells: cells.map((v, i) => ({ v, style: i === 0 ? "" : "text-align:right" })), style: style || "" });
+    const head = (labels) => labels.map((l, i) => ({ label: l, style: i === 0 ? "" : "text-align:right" }));
+    const blocks = [];
+    if (st.rpSections.kpi) {
+      blocks.push({ title: "KPI summary", head: head(["Measure", "Actual", "Budget", "Variance"]),
+        rows: [["Sales", "sales"], ["Gross profit", "gp"], ["EBITDA", "ebitda"], ["Net profit", "np"]].map(([label, id]) =>
+          R([label, F(s[id].actual), F(s[id].budget), F(s[id].actual - s[id].budget)])) });
+    }
+    if (st.rpSections.pl) {
+      blocks.push({ title: "Profit and loss", head: head(["Line", "Actual", "Budget", "Var %"]),
+        rows: LINES.map((l) => {
+          const p = ratio(s[l.id].actual - s[l.id].budget, Math.abs(s[l.id].budget));
+          return R([l.label, F(s[l.id].actual), F(s[l.id].budget), p == null ? "—" : pct(p)], l.headline ? HEADLINE_ROW : l.sum ? SUBTOTAL_ROW : "");
+        }) });
+    }
+    if (st.rpSections.territory) {
+      blocks.push({ title: "Territory summary", head: head(["Territory", "Sales", "EBITDA", "Margin"]),
+        rows: this.D.territories.map((t) => {
+          const ts = this.statement(this.scope({ terrKeys: [t.key], toUsd: true }));
+          const m = ratio(ts.ebitda.actual, ts.sales.actual);
+          return R([t.name, fmt(ts.sales.actual), fmt(ts.ebitda.actual), m == null ? "—" : m.toFixed(1) + "%"]);
+        }) });
+    }
+    if (st.rpSections.variance) {
+      blocks.push({ title: "Ranked variances", head: head(["Territory · line", "Actual", "Budget", "Variance"]),
+        rows: this.rankedVariances("all").slice(0, 8).map((r) => R([r.label, fmt(r.actual), fmt(r.budget), fmt(r.varAbs)])) });
+    }
+    if (st.rpSections.forecast) {
+      blocks.push({ title: "Forecast outlook", head: head(["Line", "Full year", "Budget", "Var"]),
+        rows: ["sales", "gp", "ebitda", "np"].map((id) => R([LINE_BY_ID[id].label, F(s[id].actual), F(s[id].budget), F(s[id].actual - s[id].budget)])) });
+    }
+    out.rpBlocks = blocks;
+  }
+
+  // ---------- 11 Data Library ----------
+  dataVals(out) {
+    const st = this.state;
+    const counts = this.D.counts;
+    out.dsCountLine = DATASETS.length + " datasets · " + (st.broken ? "1 failing" : "all passing");
+    out.datasets = DATASETS.map((d) => {
+      const failing = st.broken && d.id === "currency";
+      return {
+        name: d.name, rows: (d.key ? counts[d.key] : d.rows).toLocaleString(),
+        refreshed: "04 Feb 06:00",
+        status: failing ? "Fail" : "Pass",
+        tagCls: failing ? "tag tag-outline" : "tag tag-accent",
+        style: st.dsPick === d.id ? "background:var(--color-accent-100)" : "",
+        cls: "rowpick",
+        open: (e) => { if (e) e.preventDefault(); this.setState({ dsPick: d.id }); },
+      };
+    });
+    const picked = DATASETS.find((d) => d.id === st.dsPick) || DATASETS[0];
+    const failing = st.broken && picked.id === "currency";
+    out.dsName = picked.name;
+    out.dsSub = picked.file + " · " + (picked.key ? counts[picked.key] : picked.rows).toLocaleString() + " rows";
+    out.dsChecks = [
+      { label: "File present and readable", result: "Pass", tagCls: "tag tag-accent" },
+      { label: "Required columns present", result: "Pass", tagCls: "tag tag-accent" },
+      { label: "Every key resolves against its dimension", result: failing ? "Fail" : "Pass", tagCls: failing ? "tag tag-outline" : "tag tag-accent" },
+      { label: "No gaps in the period covered", result: failing ? "Fail" : "Pass", tagCls: failing ? "tag tag-outline" : "tag tag-accent" },
+    ];
+    out.dsHasIssues = failing;
+    out.dsIssues = failing ? [
+      { ref: "row 4118", note: "Exchange_Rate is blank for GBP on 14 Aug " + st.year + ". A blank rate cannot be carried forward silently." },
+      { ref: "rows 6201–6240", note: "No rows at all for NZD in December, so the year cannot be closed in USD." },
+    ] : [];
+    out.harnessNote = st.broken
+      ? "Currency_data.xlsx is currently marked as failing. Any screen that needs a USD conversion is holding rather than converting at a stale rate — try Executive Overview to see it."
+      : "Fail Currency_data.xlsx to see how a validation failure propagates. Screens that need a USD conversion will hold instead of showing a number.";
+    out.harnessButton = st.broken ? "Restore Currency_data.xlsx" : "Fail Currency_data.xlsx";
+    out.toggleBreak = (e) => { if (e) e.preventDefault(); this.setState({ broken: !st.broken }); };
+  }
+}
+</script>
+</body>
+</html>
